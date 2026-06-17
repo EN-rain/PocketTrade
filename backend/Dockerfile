@@ -9,7 +9,7 @@ RUN apk add --no-cache openssl
 # Install deps
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Generate prisma client + build TS
 RUN npx prisma generate
