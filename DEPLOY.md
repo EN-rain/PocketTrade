@@ -1,136 +1,169 @@
-# Deployment Guide — Used Phone Marketplace MVP
+# Deployment Guide — Used Phone Marketplace Backend (Docker)
 
-This guide walks through deploying the backend to **Render** and configuring the supporting services.
+The backend is shipped as a **Docker image** built from `backend/Dockerfile` and pushed to **GitHub Container Registry** (GHCR) at `ghcr.io/en-rain/market-app-backend`. The image is self-contained: it includes the compiled JS, Prisma client, and the migrations folder. The container runs `prisma migrate deploy` on every boot, then starts the NestJS server.
 
 ## Architecture
 
 ```
-┌─────────────────────┐      ┌──────────────────┐
-│  GitHub repo         │─────▶│  Render Web      │
-│  (source of truth)   │      │  Service (Node)  │
-└─────────────────────┘      └────────┬─────────┘
-                                      │
-                            ┌─────────┴──────────┐
-                            ▼                    ▼
-                  ┌──────────────────┐  ┌──────────────────┐
-                  │  Neon Postgres    │  │  Cloudinary       │
-                  │  (free tier)      │  │  (free tier)      │
-                  └──────────────────┘  └──────────────────┘
+┌──────────────────────┐
+│ GitHub repo (main)   │
+└──────────┬───────────┘
+           │ push
+           ▼
+┌──────────────────────┐    ┌──────────────────┐
+│ GitHub Actions       │───▶│ GHCR              │
+│ (.github/workflows/  │    │ ghcr.io/en-rain/  │
+│  docker-image.yml)   │    │ market-app-backend│
+└──────────────────────┘    └─────────┬────────┘
+                                       │ docker pull
+                                       ▼
+            ┌─────────────────────────────────────┐
+            │ Any Docker host (local, VPS,       │
+            │ Fly.io, Railway, Render-Docker,    │
+            │ DigitalOcean App Platform, etc.)   │
+            │  container runs on port 3000       │
+            └────────────┬────────────────────────┘
+                         │
+                ┌────────┴────────┐
+                ▼                 ▼
+       ┌────────────────┐  ┌──────────────────┐
+       │ Neon Postgres   │  │ Cloudinary        │
+       └────────────────┘  └──────────────────┘
 ```
 
-## Prerequisites
+## Build & push the image
 
-1. **GitHub repo** with the code pushed (see `README.md`).
-2. **Neon Postgres** free-tier database — connection string of the form:
-   ```
-   postgresql://<user>:<password>@<host>.neon.tech/neondb?sslmode=require
-   ```
-3. **Cloudinary** free-tier account — `cloud_name`, `api_key`, `api_secret`.
-4. **Render** account — https://dashboard.render.com.
+### Local build (manual)
 
-## Deploy backend to Render (one-click via Blueprint)
+```bash
+cd backend
+docker build -t ghcr.io/en-rain/market-app-backend:latest .
+docker push ghcr.io/en-rain/market-app-backend:latest
+```
 
-The repo includes `render.yaml` at the root — Render reads it and creates the service.
+(Requires `docker login ghcr.io` with a PAT that has `write:packages` scope.)
 
-1. Open https://dashboard.render.com/blueprints.
-2. Click **New Blueprint Instance**.
-3. Connect the GitHub repo (`EN-rain/Market-app`).
-4. Render reads `render.yaml` and shows the plan: 1 web service (`used-phone-marketplace-api`, free plan, Oregon).
-5. Fill in the **secret values** in the form (Render will mark them as secret):
-   - `DATABASE_URL`
-   - `CLOUDINARY_URL`
-   - `CLOUDINARY_CLOUD_NAME`
-   - `CLOUDINARY_API_KEY`
-   - `CLOUDINARY_API_SECRET`
-   - `JWT_SECRET` (paste a 64-char random hex; or let Render generate)
-   - `ADMIN_BOOTSTRAP_PASSWORD` (will be used by the seed to bootstrap an admin user)
-   - `ADMIN_BOOTSTRAP_EMAIL`
-6. Click **Apply**. Render clones the repo, runs `npm install && npx prisma generate && npm run build`, then starts the service which applies migrations + seeds the admin.
+### CI build (recommended)
 
-The service will be live at `https://used-phone-marketplace-api.onrender.com` after a few minutes.
+The repo includes `.github/workflows/docker-image.yml`. On every push to `main` that touches `backend/**`, GitHub Actions builds and pushes a new image tagged with the commit SHA and `latest`. **First-time workflow approval is required** in the GitHub Actions UI (Settings → Actions → General → "Workflow permissions").
 
-## Verify the live deployment
+To enable: open https://github.com/EN-rain/Market-app/settings/actions and approve the pending workflow. Subsequent pushes will trigger automatic builds.
+
+## Run locally with Docker
+
+```bash
+# 1. Pull the image
+docker pull ghcr.io/en-rain/market-app-backend:latest
+
+# 2. Run the container with env vars
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL='postgresql://neondb_owner:npg_kJxQ1h2wPVog@ep-morning-waterfall-ah2c220q.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require' \
+  -e CLOUDINARY_URL='cloudinary://435712829819248:TCyZxJ4m9YpCGmyVNemFHk5QVr4@dyoaiyzzg' \
+  -e CLOUDINARY_CLOUD_NAME='dyoaiyzzg' \
+  -e CLOUDINARY_API_KEY='435712829819248' \
+  -e CLOUDINARY_API_SECRET='TCyZxJ4m9YpCGmyVNemFHk5QVr4' \
+  -e JWT_SECRET='<random-64-char-hex>' \
+  -e JWT_ACCESS_TTL='15m' \
+  -e JWT_REFRESH_TTL='30d' \
+  -e ADMIN_BOOTSTRAP_PASSWORD='<strong-password>' \
+  -e ADMIN_BOOTSTRAP_EMAIL='admin@example.com' \
+  -e NODE_ENV=production \
+  -e PORT=3000 \
+  ghcr.io/en-rain/market-app-backend:latest
+```
+
+## Run on a VPS (Ubuntu 22.04)
+
+```bash
+# On the VPS:
+sudo apt update && sudo apt install -y docker.io
+sudo usermod -aG docker $USER  # log out + back in for group change
+
+# Pull and run
+docker pull ghcr.io/en-rain/market-app-backend:latest
+docker run -d --name marketplace-api --restart unless-stopped -p 3000:3000 \
+  -e DATABASE_URL='...' -e CLOUDINARY_URL='...' ... \
+  ghcr.io/en-rain/market-app-backend:latest
+
+# Verify
+curl -s http://localhost:3000/health | jq
+# { "status": "ok", "db": "ok", ... }
+```
+
+For HTTPS, put nginx or Caddy in front as a reverse proxy and point your domain's A record at the VPS IP.
+
+## Run on Fly.io (free tier available)
+
+```bash
+# Install flyctl, then in repo root:
+fly launch --image ghcr.io/en-rain/market-app-backend:latest --no-deploy
+fly secrets set \
+  DATABASE_URL='...' \
+  CLOUDINARY_URL='...' \
+  JWT_SECRET='...' \
+  ADMIN_BOOTSTRAP_PASSWORD='...'
+fly deploy
+```
+
+## Required env vars
+
+| Key | Example | Source |
+|-----|---------|--------|
+| `DATABASE_URL` | `postgresql://...?sslmode=require` | Neon dashboard |
+| `CLOUDINARY_URL` | `cloudinary://key:secret@cloud` | Cloudinary dashboard |
+| `CLOUDINARY_CLOUD_NAME` | `dyoaiyzzg` | Cloudinary dashboard |
+| `CLOUDINARY_API_KEY` | `435712829819248` | Cloudinary dashboard |
+| `CLOUDINARY_API_SECRET` | `TCyZxJ4m9YpCGmyVNemFHk5QVr4` | Cloudinary dashboard |
+| `JWT_SECRET` | 64-char random hex | `openssl rand -hex 32` |
+| `JWT_ACCESS_TTL` | `15m` | — |
+| `JWT_REFRESH_TTL` | `30d` | — |
+| `ADMIN_BOOTSTRAP_PASSWORD` | Strong password | You choose |
+| `ADMIN_BOOTSTRAP_EMAIL` | `admin@example.com` | You choose |
+| `NODE_ENV` | `production` | — |
+| `PORT` | `3000` | — |
+
+## Verify a live deployment
 
 ```bash
 # Health check
-curl -s https://used-phone-marketplace-api.onrender.com/health | jq
-
-# Should return:
+curl -s https://your-domain.com/health | jq
 # { "status": "ok", "db": "ok", "uptime": ..., "version": "0.0.1", "timestamp": "..." }
 
-# Auth flow
-curl -s -X POST https://used-phone-marketplace-api.onrender.com/auth/request-otp \
+# Request an OTP (returns devCode in dev, just status in prod)
+curl -s -X POST https://your-domain.com/auth/request-otp \
   -H 'Content-Type: application/json' \
   -d '{"mobileNumber":"+14155552671"}'
 
-# Brands
-curl -s https://used-phone-marketplace-api.onrender.com/brands | jq '.[].name'
+# Verify with the devCode from the seed log
+curl -s -X POST https://your-domain.com/auth/verify-otp \
+  -H 'Content-Type: application/json' \
+  -d '{"mobileNumber":"+14155552671","code":"123456"}'
+
+# List brands
+curl -s https://your-domain.com/brands | jq '.[].name'
 ```
 
-## Updating the deployed service
+## Updating the image
 
-`render.yaml` has `autoDeploy: true`, so any push to the `main` branch triggers a new deploy automatically.
+When you push to `main`:
+1. GitHub Actions rebuilds the image and pushes a new SHA tag + `latest`
+2. Pull and restart on your host:
+   ```bash
+   docker pull ghcr.io/en-rain/market-app-backend:latest
+   docker restart marketplace-api
+   ```
 
 ## Rotating secrets
 
-```bash
-# Update env vars via Render dashboard:
-# https://dashboard.render.com/web/srv-XXXXX/env
-```
-
-Or via Render API:
-
-```bash
-curl -X PUT -H "Authorization: Bearer $RENDER_API_KEY" \
-  -H "Content-Type: application/json" \
-  https://api.render.com/v1/services/srv-XXXX/env-vars \
-  -d '[{"key":"JWT_SECRET","value":"new-secret"}]'
-```
-
-## Admin bootstrap on first deploy
-
-The `startCommand` in `render.yaml` runs:
-
-```bash
-cd backend && npx prisma migrate deploy && npm run seed && npm run start
-```
-
-`npm run seed` reads `ADMIN_BOOTSTRAP_PASSWORD` from env. If the env value is the placeholder `replace_with_random_password` (or shorter than 8 chars), the seed generates a random password and **prints it to the logs ONCE**. Set a known value before first deploy to control the password.
-
-To retrieve the generated password:
-
-```bash
-# Render dashboard → Logs tab on the service
-# Or via API:
-curl -H "Authorization: Bearer $RENDER_API_KEY" \
-  "https://api.render.com/v1/services/srv-XXXX/logs?text=ADMIN"
-```
-
-## Logs
-
-Real-time logs via dashboard, or:
-
-```bash
-curl -H "Authorization: Bearer $RENDER_API_KEY" \
-  "https://api.render.com/v1/services/srv-XXXX/logs"
-```
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Build fails: `Cannot find module '@prisma/client'` | `prisma generate` skipped | Confirm `buildCommand` in render.yaml includes `npx prisma generate` |
-| Deploy crashes: `JWT_SECRET must be set` | env not injected | Set in Render dashboard env vars |
-| Deploy crashes: `P1001 Can't reach database server` | Neon DB unreachable | Check Neon dashboard; verify DATABASE_URL; free-tier Neons suspend after inactivity — wake it from the dashboard |
-| `/health` returns `db:'error'` | Same as above | Same as above |
-| Image upload fails | Cloudinary creds invalid | Re-check CLOUDINARY_* env vars |
-| `npm run seed` overwrites admin password every deploy | `seed.ts` always upserts with the current env value | Expected; set ADMIN_BOOTSTRAP_PASSWORD to the desired value to freeze it |
+Rotate via the host's environment manager (systemd EnvironmentFile, docker-compose `.env`, Fly secrets, etc.) and restart the container. The next request will use the new value.
 
 ## Cost
 
-| Service | Tier | Cost |
-|---------|------|------|
-| Render Web Service | Free | $0 (spins down after 15 min idle) |
-| Neon Postgres | Free | $0 (0.5 GB, scales to zero after 5 min idle) |
-| Cloudinary | Free | $0 (25 credits/month, ~25k transforms) |
-| **Total** | | **$0/month** |
+| Component | Tier | Cost |
+|-----------|------|------|
+| GHCR image hosting | Free | $0 (1 GB storage free) |
+| Neon Postgres | Free | $0 (0.5 GB) |
+| Cloudinary | Free | $0 (25 credits/mo) |
+| VPS (Hetzner/DO) | Smallest | $4–6/mo |
+| **Self-hosted total** | | **~$4–6/mo** |
+| Fly.io free allowance | — | $0 if low traffic |
