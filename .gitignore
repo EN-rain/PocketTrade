@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 *.log
+qa-results/
 mobile/android/app/google-services.json
 
 backend/dist/
