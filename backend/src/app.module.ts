@@ -11,6 +11,10 @@ import { StorageModule } from './storage/storage.module';
 import { ListingsModule } from './listings/listings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdminModule } from './admin/admin.module';
+import { BlocksModule } from './blocks/blocks.module';
+import { ConversationsModule } from './conversations/conversations.module';
+import { PushModule } from './push/push.module';
+import { ReportsModule } from './reports/reports.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 
@@ -34,6 +38,10 @@ import { RolesGuard } from './auth/roles.guard';
     StorageModule,
     ListingsModule,
     FavoritesModule,
+    BlocksModule,
+    PushModule,
+    ConversationsModule,
+    ReportsModule,
     AdminModule,
   ],
   providers: [

@@ -1,16 +1,11 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ListingStatus, ReportStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdminLoginDto } from './dto/admin-login.dto';
 import { AdminListingsQueryDto } from './dto/admin-listings-query.dto';
+import { AdminLoginDto } from './dto/admin-login.dto';
 import { AdminUsersQueryDto } from './dto/admin-users-query.dto';
 
 @Injectable()
@@ -22,14 +17,13 @@ export class AdminService {
   ) {}
 
   async login(dto: AdminLoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
     if (!user || user.role !== 'admin' || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
-
-    const payload = { sub: user.id, mobileNumber: user.mobileNumber, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: this.config.get<string>('JWT_ACCESS_TTL', '15m') as unknown as number,
     });
@@ -38,10 +32,59 @@ export class AdminService {
       { expiresIn: this.config.get<string>('JWT_REFRESH_TTL', '30d') as unknown as number },
     );
     await this.prisma.user.update({ where: { id: user.id }, data: { lastActiveAt: new Date() } });
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
+  }
+
+  async dashboard() {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60_000);
+    const [
+      totalUsers,
+      activeUsers,
+      suspendedUsers,
+      totalListings,
+      pendingListings,
+      activeListings,
+      rejectedListings,
+      totalReports,
+      totalFavorites,
+      totalMessages,
+      recentListings,
+      recentActivity,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { accountStatus: 'active' } }),
+      this.prisma.user.count({ where: { accountStatus: 'suspended' } }),
+      this.prisma.listing.count(),
+      this.prisma.listing.count({ where: { status: 'pending' } }),
+      this.prisma.listing.count({ where: { status: 'active' } }),
+      this.prisma.listing.count({ where: { status: 'rejected' } }),
+      this.prisma.report.count(),
+      this.prisma.favorite.count(),
+      this.prisma.message.count(),
+      this.prisma.listing.findMany({ orderBy: { createdAt: 'desc' }, take: 8 }),
+      this.prisma.adminActivityLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
+    ]);
     return {
-      accessToken,
-      refreshToken,
-      user: { id: user.id, email: user.email, mobileNumber: user.mobileNumber, role: user.role },
+      metrics: {
+        totalUsers,
+        activeUsers,
+        suspendedUsers,
+        totalListings,
+        pendingListings,
+        activeListings,
+        rejectedListings,
+        totalReports,
+        totalFavorites,
+        totalMessages,
+        newUsersLast7Days: await this.prisma.user.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
+        newListingsLast7Days: await this.prisma.listing.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
+      },
+      recentListings,
+      recentActivity: recentActivity.map((a) => ({
+        type: a.action,
+        description: `${a.action} ${a.targetType} ${a.targetId}`,
+        createdAt: a.createdAt,
+      })),
     };
   }
 
@@ -50,7 +93,6 @@ export class AdminService {
     if (query.status) where.status = query.status;
     if (query.brand) where.brand = { equals: query.brand, mode: 'insensitive' };
     if (query.model) where.model = { contains: query.model, mode: 'insensitive' };
-
     const skip = ((query.page ?? 1) - 1) * (query.limit ?? 20);
     const take = query.limit ?? 20;
     const [items, total] = await Promise.all([
@@ -59,56 +101,35 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: { images: { orderBy: { displayOrder: 'asc' } } },
+        include: { images: { orderBy: { displayOrder: 'asc' } }, seller: { select: { id: true, email: true, displayName: true } } },
       }),
       this.prisma.listing.count({ where }),
     ]);
     return { items, total, page: query.page ?? 1, limit: take, pages: Math.ceil(total / take) };
   }
 
-  async approveListing(id: number, adminId: number) {
+  async getListing(id: number) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      include: { images: { orderBy: { displayOrder: 'asc' } }, seller: true, reports: true },
+    });
+    if (!listing) throw new NotFoundException(`Listing ${id} not found`);
+    return listing;
+  }
+
+  async updateListing(id: number, adminId: number, dto: Record<string, unknown>) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
-    if (listing.status !== 'pending') {
-      throw new BadRequestException(`Listing is ${listing.status}, can only approve pending listings`);
-    }
-    const updated = await this.prisma.listing.update({
-      where: { id },
-      data: { status: 'active' },
-    });
-    await this.prisma.adminActivityLog.create({
-      data: {
-        adminId: String(adminId),
-        action: 'approve_listing',
-        targetType: 'listing',
-        targetId: String(id),
-        previousValue: { status: listing.status },
-        newValue: { status: updated.status },
-      },
-    });
+    const updated = await this.prisma.listing.update({ where: { id }, data: dto as any });
+    await this.log(adminId, 'edit_listing', 'listing', id, listing, updated);
     return updated;
   }
 
-  async rejectListing(id: number, adminId: number, reason?: string) {
+  async setListingStatus(id: number, adminId: number, status: ListingStatus, reason?: string) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
-    if (listing.status !== 'pending') {
-      throw new BadRequestException(`Listing is ${listing.status}, can only reject pending listings`);
-    }
-    const updated = await this.prisma.listing.update({
-      where: { id },
-      data: { status: 'rejected' },
-    });
-    await this.prisma.adminActivityLog.create({
-      data: {
-        adminId: String(adminId),
-        action: 'reject_listing',
-        targetType: 'listing',
-        targetId: String(id),
-        previousValue: { status: listing.status, reason: null },
-        newValue: { status: updated.status, reason: reason ?? null },
-      },
-    });
+    const updated = await this.prisma.listing.update({ where: { id }, data: { status } });
+    await this.log(adminId, `${status}_listing`, 'listing', id, { status: listing.status }, { status, reason: reason ?? null });
     return updated;
   }
 
@@ -116,7 +137,6 @@ export class AdminService {
     const where: any = {};
     if (query.role) where.role = query.role;
     if (query.accountStatus) where.accountStatus = query.accountStatus;
-
     const skip = ((query.page ?? 1) - 1) * (query.limit ?? 20);
     const take = query.limit ?? 20;
     const [items, total] = await Promise.all([
@@ -125,136 +145,120 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        select: {
-          id: true,
-          mobileNumber: true,
-          email: true,
-          displayName: true,
-          accountStatus: true,
-          role: true,
-          createdAt: true,
-          lastActiveAt: true,
-        },
+        select: { id: true, email: true, displayName: true, accountStatus: true, role: true, createdAt: true, lastActiveAt: true, suspensionReason: true },
       }),
       this.prisma.user.count({ where }),
     ]);
     return { items, total, page: query.page ?? 1, limit: take, pages: Math.ceil(total / take) };
   }
 
-  async suspendUser(id: number, adminId: number) {
+  async getUser(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, displayName: true, profileImage: true, location: true, accountStatus: true, role: true, createdAt: true, lastActiveAt: true, suspensionReason: true, deletionRequestedAt: true },
+    });
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+    return user;
+  }
+
+  async userListings(id: number) {
+    return this.prisma.listing.findMany({ where: { sellerId: id }, orderBy: { createdAt: 'desc' }, include: { images: true } });
+  }
+
+  async suspendUser(id: number, adminId: number, reason?: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
-    if (user.accountStatus === 'suspended') {
-      throw new BadRequestException('User is already suspended');
-    }
-    if (user.role === 'admin') {
-      throw new BadRequestException('Cannot suspend an admin');
-    }
+    if (user.role === 'admin') throw new BadRequestException('Cannot suspend an admin');
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { accountStatus: 'suspended' },
+      data: { accountStatus: 'suspended', suspensionReason: reason ?? null },
     });
-    await this.prisma.adminActivityLog.create({
-      data: {
-        adminId: String(adminId),
-        action: 'suspend_user',
-        targetType: 'user',
-        targetId: String(id),
-        previousValue: { accountStatus: user.accountStatus },
-        newValue: { accountStatus: updated.accountStatus },
-      },
-    });
+    await this.log(adminId, 'suspend_user', 'user', id, { accountStatus: user.accountStatus }, { accountStatus: updated.accountStatus, reason: reason ?? null });
     return updated;
   }
 
   async restoreUser(id: number, adminId: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
-    if (user.accountStatus === 'active') {
-      throw new BadRequestException('User is already active');
-    }
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { accountStatus: 'active' },
+      data: { accountStatus: 'active', suspensionReason: null },
     });
-    await this.prisma.adminActivityLog.create({
-      data: {
-        adminId: String(adminId),
-        action: 'restore_user',
-        targetType: 'user',
-        targetId: String(id),
-        previousValue: { accountStatus: user.accountStatus },
-        newValue: { accountStatus: updated.accountStatus },
-      },
-    });
+    await this.log(adminId, 'restore_user', 'user', id, { accountStatus: user.accountStatus }, { accountStatus: updated.accountStatus });
     return updated;
   }
 
-  async dashboard() {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const [
-      totalUsers,
-      activeUsers,
-      suspendedUsers,
-      totalListings,
-      pendingListings,
-      activeListings,
-      soldListings,
-      rejectedListings,
-      removedListings,
-      expiredListings,
-      recentReports,
-      recentSearches,
-      topSearchRaw,
-      newListings7d,
-      newUsers7d,
-    ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { accountStatus: 'active' } }),
-      this.prisma.user.count({ where: { accountStatus: 'suspended' } }),
-      this.prisma.listing.count(),
-      this.prisma.listing.count({ where: { status: 'pending' } }),
-      this.prisma.listing.count({ where: { status: 'active' } }),
-      this.prisma.listing.count({ where: { status: 'sold' } }),
-      this.prisma.listing.count({ where: { status: 'rejected' } }),
-      this.prisma.listing.count({ where: { status: 'removed' } }),
-      this.prisma.listing.count({ where: { status: 'expired' } }),
-      this.prisma.report.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
-      this.prisma.searchLog.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
-      this.prisma.$queryRaw<{ search_term: string; count: bigint }[]>`
-        SELECT search_term as "searchTerm", COUNT(*) as count
-        FROM search_logs
-        GROUP BY search_term
-        ORDER BY count DESC
-        LIMIT 10
-      `,
-      this.prisma.listing.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
-      this.prisma.user.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
-    ]);
-
-    const topSearchTerms = topSearchRaw.map((r) => ({
-      term: r.search_term,
-      count: Number(r.count),
-    }));
-
+  async searchAnalytics() {
+    const topTerms = await this.prisma.searchLog.groupBy({
+      by: ['searchTerm'],
+      _count: { searchTerm: true },
+      orderBy: { _count: { searchTerm: 'desc' } },
+      take: 20,
+    });
+    const zeroResults = await this.prisma.searchLog.findMany({
+      where: { resultCount: 0 },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
     return {
-      users: { total: totalUsers, active: activeUsers, suspended: suspendedUsers },
-      listings: {
-        total: totalListings,
-        pending: pendingListings,
-        active: activeListings,
-        sold: soldListings,
-        rejected: rejectedListings,
-        removed: removedListings,
-        expired: expiredListings,
-      },
-      recentReports,
-      recentSearches,
-      topSearchTerms,
-      newListingsLast7Days: newListings7d,
-      newUsersLast7Days: newUsers7d,
+      topTerms: topTerms.map((t) => ({ term: t.searchTerm, count: t._count.searchTerm })),
+      zeroResults,
     };
+  }
+
+  async listReports(status: ReportStatus | undefined, page: number, limit: number) {
+    const where = status ? { status } : {};
+    const skip = (Math.max(page, 1) - 1) * Math.min(limit, 100);
+    const take = Math.min(Math.max(limit, 1), 100);
+    const [items, total] = await Promise.all([
+      this.prisma.report.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          reporter: { select: { id: true, email: true, displayName: true } },
+          reportedUser: { select: { id: true, email: true, displayName: true } },
+          reportedListing: { include: { images: true } },
+          conversation: { include: { messages: { orderBy: { createdAt: 'asc' }, take: 50 } } },
+        },
+      }),
+      this.prisma.report.count({ where }),
+    ]);
+    return { items, total, page: Math.max(page, 1), limit: take, pages: Math.ceil(total / take) };
+  }
+
+  async setReportStatus(id: number, adminId: number, status: ReportStatus) {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) throw new NotFoundException(`Report ${id} not found`);
+    const updated = await this.prisma.report.update({
+      where: { id },
+      data: { status, reviewedAt: new Date() },
+    });
+    await this.log(adminId, `${status}_report`, 'report', id, { status: report.status }, { status });
+    return updated;
+  }
+
+  async activity(page: number, limit: number) {
+    const skip = (Math.max(page, 1) - 1) * Math.min(limit, 100);
+    const take = Math.min(Math.max(limit, 1), 100);
+    const [items, total] = await Promise.all([
+      this.prisma.adminActivityLog.findMany({ orderBy: { createdAt: 'desc' }, skip, take }),
+      this.prisma.adminActivityLog.count(),
+    ]);
+    return { items, total, page: Math.max(page, 1), limit: take, pages: Math.ceil(total / take) };
+  }
+
+  private async log(adminId: number, action: string, targetType: string, targetId: number, previousValue?: unknown, newValue?: unknown) {
+    await this.prisma.adminActivityLog.create({
+      data: {
+        adminId: String(adminId),
+        action,
+        targetType,
+        targetId: String(targetId),
+        previousValue: previousValue as object,
+        newValue: newValue as object,
+      },
+    });
   }
 }

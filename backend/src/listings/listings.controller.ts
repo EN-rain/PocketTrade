@@ -1,22 +1,27 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  UseInterceptors,
-  UploadedFile,
   BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ListingsService } from './listings.service';
-import { CreateListingDto } from './dto/create-listing.dto';
-import { ListListingsQueryDto } from './dto/list-listings.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
-import { memoryStorage } from 'multer';
+import { CreateListingDto } from './dto/create-listing.dto';
+import { ListListingsQueryDto } from './dto/list-listings.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
+import { ListingsService } from './listings.service';
 
 @Controller('listings')
 export class ListingsController {
@@ -24,9 +29,9 @@ export class ListingsController {
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('photo', {
+    FilesInterceptor('photos', 8, {
       storage: memoryStorage(),
-      limits: { fileSize: 8 * 1024 * 1024 },
+      limits: { fileSize: 8 * 1024 * 1024, files: 8 },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           return cb(new BadRequestException('Only images allowed'), false);
@@ -38,12 +43,42 @@ export class ListingsController {
   async create(
     @CurrentUser() user: { id: number },
     @Body() dto: CreateListingDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
-    if (!file) {
-      throw new BadRequestException('photo file is required');
-    }
-    return this.listingsService.create(user.id, dto, file.buffer, file.originalname);
+    if (!files?.length) throw new BadRequestException('At least one photo is required');
+    return this.listingsService.create(user.id, dto, files);
+  }
+
+  @Get('mine')
+  async mine(@CurrentUser() user: { id: number }) {
+    return this.listingsService.mine(user.id);
+  }
+
+  @Patch(':id')
+  async update(
+    @CurrentUser() user: { id: number },
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateListingDto,
+  ) {
+    return this.listingsService.updateOwn(user.id, id, dto);
+  }
+
+  @Post(':id/mark-sold')
+  @HttpCode(HttpStatus.OK)
+  async markSold(@CurrentUser() user: { id: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.listingsService.markSold(user.id, id);
+  }
+
+  @Post(':id/republish')
+  @HttpCode(HttpStatus.OK)
+  async republish(@CurrentUser() user: { id: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.listingsService.republish(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: { id: number }, @Param('id', ParseIntPipe) id: number) {
+    await this.listingsService.removeOwn(user.id, id);
   }
 
   @Public()

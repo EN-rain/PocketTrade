@@ -16,7 +16,7 @@ describe('UsersController', () => {
           useValue: {
             getById: jest.fn().mockResolvedValue({
               id: 1,
-              mobileNumber: '+14155552671',
+              email: 'user@test.com',
               role: 'user',
               accountStatus: 'active',
             }),

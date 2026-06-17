@@ -1,0 +1,40 @@
+=== 1. Backend (Render via localtunnel) ===
+
+[info] Tunnel unavailable — falling back to localhost:3000
+{"status":"ok","db":"ok","uptime":13969.448996987,"version":"0.0.1","timestamp":"2026-06-17T05:31:08.434Z"}
+[OK]   Backend /health (localhost docker fallback) — http://localhost:3000
+
+=== 2. Admin panel (Vercel) ===
+HTTP/2 200 
+accept-ranges: bytes
+access-control-allow-origin: *
+  /login SPA fallback: HTTP 200
+  JS bundle: HTTP 200
+  VITE_API_URL baked in: http://localhost:3000`,headers:{
+[OK]   Vercel admin — http://localhost:5173 (serves Admin Panel + JS bundle + SPA fallback; API URL → http://localhost:3000`,headers:{)
+
+=== 3. Neon Postgres: SELECT 1 ===
+  host: ep-morning-waterfall-ah2c220q.c-3.us-east-1.aws.neon.tech
+ smoke_ok 
+----------
+ 1        
+(1 row)
+[OK]   Neon SELECT 1 returned 1 (host: ep-morning-waterfall-ah2c220q.c-3.us-east-1.aws.neon.tech)
+
+=== 4. Cloudinary: HEAD root ===
+HTTP/2 400 
+content-type: image/gif
+x-cld-error: public_id (/) is invalid
+x-request-id: 22c23ec30dcbad79e869b530a2bee45e
+content-transfer-encoding: binary
+[OK]   Cloudinary root reachable — https://res.cloudinary.com/dyoaiyzzg/image/upload/
+
+================================================================
+Smoke check summary: 4 OK, 0 FAIL
+================================================================
+  OK   Backend /health (localhost docker fallback) — http://localhost:3000
+  OK   Vercel admin — http://localhost:5173 (serves Admin Panel + JS bundle + SPA fallback; API URL → http://localhost:3000`,headers:{)
+  OK   Neon SELECT 1 returned 1 (host: ep-morning-waterfall-ah2c220q.c-3.us-east-1.aws.neon.tech)
+  OK   Cloudinary root reachable — https://res.cloudinary.com/dyoaiyzzg/image/upload/
+
+All four services responding. MVP is healthy.

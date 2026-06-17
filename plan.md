@@ -1,10 +1,10 @@
 Below is a practical development plan that can be used as a project proposal, implementation roadmap, or freelancer milestone document.
 
-# Used Mobile Phone Marketplace — Project Plan
+# PocketTrade — Project Plan
 
 ## 1. Project Objective
 
-Build a production-ready Android marketplace where users can quickly buy and sell used mobile phones.
+Build a production-ready Android PocketTrade where users can quickly buy and sell used mobile phones.
 
 The platform will prioritize:
 
@@ -13,7 +13,7 @@ The platform will prioritize:
 * Strong device search and filtering
 * Private in-app buyer and seller communication
 * Minimalist and uncluttered design
-* Straightforward marketplace administration
+* Straightforward PocketTrade administration
 
 The project will include:
 
@@ -73,7 +73,7 @@ Alternative:
 
 ## 3. User Roles
 
-### Marketplace User
+### PocketTrade User
 
 A single user account may act as both a buyer and seller.
 
@@ -99,7 +99,7 @@ The administrator has full access to:
 * User accounts
 * Reports
 * Search analytics
-* Marketplace statistics
+* PocketTrade statistics
 * Content moderation
 
 ---
@@ -191,7 +191,7 @@ The listing may either:
 * Become visible immediately and be reviewed afterward, or
 * Remain pending until approved by the administrator
 
-For safer marketplace moderation, administrator approval before public visibility is recommended.
+For safer PocketTrade moderation, administrator approval before public visibility is recommended.
 
 ---
 
@@ -427,7 +427,7 @@ The administrator can view:
 * Searches with no results
 * Search volume by date
 
-These statistics will help identify popular devices and missing marketplace inventory.
+These statistics will help identify popular devices and missing PocketTrade inventory.
 
 ---
 
@@ -650,7 +650,7 @@ Tasks:
 
 ---
 
-## Phase 4 — Marketplace Features
+## Phase 4 — PocketTrade Features
 
 Tasks:
 
@@ -822,7 +822,7 @@ Completion requirements:
 * Listings can be created and retrieved
 * Images can be uploaded
 
-### Milestone 3 — Android Marketplace
+### Milestone 3 — Android PocketTrade
 
 Completion requirements:
 
@@ -866,7 +866,7 @@ The project will be considered complete when:
 * A user can register and log in through OTP.
 * A seller can create a listing with details and photos.
 * The administrator can approve or reject a listing.
-* Approved listings appear in marketplace searches.
+* Approved listings appear in PocketTrade searches.
 * Buyers can filter listings by brand, model, price, and location.
 * A buyer can start an in-app conversation with a seller.
 * Email addresses and mobile numbers are not publicly exposed.
@@ -941,4 +941,4 @@ At project completion, the client will receive:
 * One live deployment to the client's hosting
 * Basic administrator usage documentation
 
-A sensible first release should focus on OTP login, listings, search, filters, messaging, moderation, and essential analytics. Payments, delivery, ratings, and identity verification can be added after the marketplace has active users.
+A sensible first release should focus on OTP login, listings, search, filters, messaging, moderation, and essential analytics. Payments, delivery, ratings, and identity verification can be added after the PocketTrade has active users.

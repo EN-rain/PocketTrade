@@ -26,8 +26,21 @@ describe('AdminController', () => {
               user: { id: 1, email: 'admin@test.com', role: 'admin' },
             }),
             dashboard: jest.fn().mockResolvedValue({
-              users: { total: 10, active: 8, suspended: 2 },
-              listings: { total: 50, pending: 5, active: 40 },
+              metrics: {
+                totalUsers: 10,
+                activeUsers: 8,
+                suspendedUsers: 2,
+                totalListings: 50,
+                pendingListings: 5,
+                activeListings: 40,
+                soldListings: 0,
+                rejectedListings: 0,
+                totalReports: 0,
+                totalFavorites: 0,
+                totalMessages: 0,
+              },
+              recentListings: [],
+              recentActivity: [],
             }),
           },
         },
@@ -47,7 +60,7 @@ describe('AdminController', () => {
 
   it('dashboard returns stats', async () => {
     const result = await controller.dashboard();
-    expect(result.users.total).toBe(10);
-    expect(result.listings.active).toBe(40);
+    expect(result.metrics.totalUsers).toBe(10);
+    expect(result.metrics.activeListings).toBe(40);
   });
 });

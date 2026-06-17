@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
-  NotFoundException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
+import { ListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../storage/cloudinary.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { ListListingsQueryDto } from './dto/list-listings.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
 
 @Injectable()
 export class ListingsService {
@@ -15,22 +19,15 @@ export class ListingsService {
     private cloudinary: CloudinaryService,
   ) {}
 
-  async create(
-    sellerId: number,
-    dto: CreateListingDto,
-    fileBuffer: Buffer,
-    originalName: string,
-  ) {
-    const safeName = `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-    let url: string;
+  async create(sellerId: number, dto: CreateListingDto, files: Express.Multer.File[]) {
+    await this.assertActiveUser(sellerId);
+    const uploaded = [];
     try {
-      const result = await this.cloudinary.uploadImage(
-        fileBuffer,
-        safeName,
-        'marketplace/listings',
-      );
-      url = result.url;
+      for (const [index, file] of files.entries()) {
+        const safeName = `${Date.now()}-${index}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const result = await this.cloudinary.uploadImage(file.buffer, safeName, 'PocketTrade/listings');
+        uploaded.push({ imageUrl: result.url, displayOrder: index });
+      }
     } catch (err) {
       throw new InternalServerErrorException(
         `Image upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -49,32 +46,77 @@ export class ListingsService {
         description: dto.description,
         location: dto.location,
         status: 'pending',
-        images: {
-          create: [{ imageUrl: url, displayOrder: 0 }],
-        },
+        images: { create: uploaded },
       },
-      include: { images: true },
+      include: this.includeListing().include,
+    });
+  }
+
+  async mine(sellerId: number) {
+    return this.prisma.listing.findMany({
+      where: { sellerId },
+      orderBy: { createdAt: 'desc' },
+      include: this.includeListing().include,
+    });
+  }
+
+  async updateOwn(sellerId: number, id: number, dto: UpdateListingDto) {
+    await this.assertActiveUser(sellerId);
+    const listing = await this.assertOwnedListing(sellerId, id);
+    if (listing.status === 'removed') throw new BadRequestException('Removed listings cannot be edited');
+    return this.prisma.listing.update({
+      where: { id },
+      data: { ...dto, status: listing.status === 'active' ? 'pending' : listing.status },
+      include: this.includeListing().include,
+    });
+  }
+
+  async setStatusOwn(sellerId: number, id: number, status: ListingStatus) {
+    await this.assertActiveUser(sellerId);
+    await this.assertOwnedListing(sellerId, id);
+    return this.prisma.listing.update({
+      where: { id },
+      data: { status },
+      include: this.includeListing().include,
+    });
+  }
+
+  async removeOwn(sellerId: number, id: number) {
+    await this.setStatusOwn(sellerId, id, 'removed');
+  }
+
+  async markSold(sellerId: number, id: number) {
+    return this.setStatusOwn(sellerId, id, 'sold');
+  }
+
+  async republish(sellerId: number, id: number) {
+    await this.assertActiveUser(sellerId);
+    const listing = await this.assertOwnedListing(sellerId, id);
+    if (!['expired', 'rejected', 'removed'].includes(listing.status)) {
+      throw new BadRequestException('Only expired, rejected, or removed listings can be republished');
+    }
+    return this.prisma.listing.update({
+      where: { id },
+      data: { status: 'pending' },
+      include: this.includeListing().include,
     });
   }
 
   async getById(id: number) {
     const listing = await this.prisma.listing.findUnique({
       where: { id },
-      include: {
-        images: { orderBy: { displayOrder: 'asc' } },
-        seller: { select: { id: true, displayName: true } },
-      },
+      include: this.includeListing().include,
     });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
     return listing;
   }
 
   async search(query: ListListingsQueryDto) {
-    const where: any = { status: 'active' };
+    const where: any = { status: { in: ['active', 'sold'] } };
     if (query.brand) where.brand = { equals: query.brand, mode: 'insensitive' };
     if (query.model) where.model = { contains: query.model, mode: 'insensitive' };
     if (query.condition) where.condition = query.condition;
-    if (query.storage) where.storage = query.storage;
+    if (query.storage) where.storage = { contains: query.storage, mode: 'insensitive' };
     if (query.location) where.location = { contains: query.location, mode: 'insensitive' };
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
       where.price = {};
@@ -96,9 +138,37 @@ export class ListingsService {
     const skip = ((query.page ?? 1) - 1) * (query.limit ?? 20);
     const take = query.limit ?? 20;
     const [items, total] = await Promise.all([
-      this.prisma.listing.findMany({ where, orderBy, skip, take, include: { images: { orderBy: { displayOrder: 'asc' } } } }),
+      this.prisma.listing.findMany({ where, orderBy, skip, take, include: this.includeListing().include }),
       this.prisma.listing.count({ where }),
     ]);
+    if (query.q) {
+      await this.prisma.searchLog.create({
+        data: { searchTerm: query.q, filters: query as object, resultCount: total },
+      });
+    }
     return { items, total, page: query.page ?? 1, limit: take, pages: Math.ceil(total / take) };
+  }
+
+  private includeListing() {
+    return {
+      include: {
+        images: { orderBy: { displayOrder: 'asc' as const } },
+        seller: { select: { id: true, displayName: true, profileImage: true, location: true } },
+      },
+    };
+  }
+
+  private async assertActiveUser(userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.accountStatus !== 'active') {
+      throw new ForbiddenException('Account is not active');
+    }
+  }
+
+  private async assertOwnedListing(sellerId: number, id: number) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) throw new NotFoundException(`Listing ${id} not found`);
+    if (listing.sellerId !== sellerId) throw new ForbiddenException('Listing belongs to another seller');
+    return listing;
   }
 }

@@ -40,8 +40,8 @@ export class ListListingsQueryDto {
   q?: string;
 
   @IsOptional()
-  @IsIn(['newest', 'oldest', 'price_asc', 'price_desc'])
-  sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' = 'newest';
+  @IsIn(['newest', 'oldest', 'price_asc', 'price_desc', 'relevant'])
+  sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'relevant' = 'newest';
 
   @IsOptional()
   @Type(() => Number)

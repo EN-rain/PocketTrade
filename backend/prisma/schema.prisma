@@ -32,11 +32,14 @@ enum UserRole {
 // ----------------------------------------------------------
 model User {
   id           Int            @id @default(autoincrement())
-  mobileNumber String         @unique @map("mobile_number")
-  email        String?        @unique @map("email")
+  mobileNumber String?        @unique @map("mobile_number")
+  email        String         @unique @map("email")
   displayName  String?        @map("display_name")
   profileImage String?        @map("profile_image")
   location     String?
+  notificationPreferences Json? @map("notification_preferences")
+  deletionRequestedAt DateTime? @map("deletion_requested_at")
+  suspensionReason String? @map("suspension_reason") @db.Text
   accountStatus AccountStatus @default(active) @map("account_status")
   passwordHash String?        @map("password_hash")
   role         UserRole       @default(user)
@@ -49,10 +52,15 @@ model User {
   sellerConversations Conversation[]  @relation("Seller")
   messages            Message[]
   favorites           Favorite[]
+  blockedUsers        BlockedUser[]   @relation("Blocker")
+  blockedBy           BlockedUser[]   @relation("Blocked")
+  pushTokens          PushToken[]
+  revokedTokens       RevokedRefreshToken[]
   reportedReports     Report[]        @relation("Reporter")
   reportedUsers       Report[]        @relation("ReportedUser")
 
   @@index([mobileNumber])
+  @@index([email])
   @@map("users")
 }
 
@@ -67,15 +75,29 @@ enum AccountStatus {
 // ----------------------------------------------------------
 model OtpRequest {
   id           Int      @id @default(autoincrement())
-  mobileNumber String   @map("mobile_number")
+  email        String
   hashedOtp    String   @map("hashed_otp")
   expiresAt    DateTime @map("expires_at")
   attempts     Int      @default(0)
   verified     Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")
 
-  @@index([mobileNumber])
+  @@index([email])
   @@map("otp_requests")
+}
+
+model RevokedRefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("revoked_refresh_tokens")
 }
 
 // ----------------------------------------------------------
@@ -155,6 +177,7 @@ model Conversation {
   buyer    User      @relation("Buyer", fields: [buyerId], references: [id], onDelete: Cascade)
   seller   User      @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade)
   messages Message[]
+  reports Report[]
 
   @@unique([listingId, buyerId, sellerId])
   @@map("conversations")
@@ -194,6 +217,35 @@ model Favorite {
   @@map("favorites")
 }
 
+model BlockedUser {
+  id        Int      @id @default(autoincrement())
+  blockerId Int     @map("blocker_id")
+  blockedId Int     @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocked_users")
+}
+
+model PushToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  platform  String
+  deviceId  String?  @map("device_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
 // ----------------------------------------------------------
 // 8. reports
 // ----------------------------------------------------------
@@ -202,16 +254,20 @@ model Report {
   reporterId        Int          @map("reporter_id")
   reportedUserId    Int?         @map("reported_user_id")
   reportedListingId Int?         @map("reported_listing_id")
+  conversationId    Int?         @map("conversation_id")
   reason            ReportReason
   details           String?      @db.Text
   status            ReportStatus @default(pending)
   createdAt         DateTime     @default(now()) @map("created_at")
+  reviewedAt        DateTime?    @map("reviewed_at")
 
   reporter       User      @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedUser   User?     @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
   reportedListing Listing? @relation(fields: [reportedListingId], references: [id], onDelete: SetNull)
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([status])
+  @@index([conversationId])
   @@map("reports")
 }
 

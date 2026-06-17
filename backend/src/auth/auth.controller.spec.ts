@@ -29,7 +29,7 @@ describe('AuthController', () => {
   });
 
   it('requestOtp returns success with dev code', async () => {
-    const result = await controller.requestOtp({ mobileNumber: '+14155552671' });
+    const result = await controller.requestOtp({ email: 'user@test.com' });
     expect(result.success).toBe(true);
     expect(result.devCode).toBe('123456');
   });
