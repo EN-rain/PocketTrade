@@ -13,24 +13,24 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: "3000"
       - key: DATABASE_URL
-        sync: false
+        value: postgresql://neondb_owner:npg_kJxQ1h2wPVog@ep-morning-waterfall-ah2c220q.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
       - key: CLOUDINARY_URL
-        sync: false
+        value: cloudinary://435712829819248:TCyZxJ4m9YpCGmyVNemFHk5QVr4@dyoaiyzzg
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        value: dyoaiyzzg
       - key: CLOUDINARY_API_KEY
-        sync: false
+        value: "435712829819248"
       - key: CLOUDINARY_API_SECRET
-        sync: false
+        value: TCyZxJ4m9YpCGmyVNemFHk5QVr4
       - key: JWT_SECRET
-        generateValue: true
+        value: prod-jwt-secret-replace-in-prod-9c8a7b6d5e4f3a2b1c0d
       - key: JWT_ACCESS_TTL
         value: 15m
       - key: JWT_REFRESH_TTL
         value: 30d
       - key: ADMIN_BOOTSTRAP_PASSWORD
-        generateValue: true
+        value: ProdAdminPass123ChangeMe
       - key: ADMIN_BOOTSTRAP_EMAIL
         value: admin@example.com
