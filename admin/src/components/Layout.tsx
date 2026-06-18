@@ -8,9 +8,6 @@ const navItems = [
   { path: '/reports', label: 'Reports' },
   { path: '/analytics', label: 'Search Analytics' },
   { path: '/activity', label: 'Activity Log' },
-  { path: '/reports', label: 'Reports' },
-  { path: '/analytics', label: 'Search Analytics' },
-  { path: '/activity', label: 'Activity Log' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -24,7 +21,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-slate-100 flex">
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
@@ -36,15 +33,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200
+          fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-900
           transform transition-transform duration-200 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900">Admin Panel</h1>
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-emerald-400">PocketTrade</p>
+            <h1 className="text-lg font-semibold text-white">Admin</h1>
+          </div>
           <button
-            className="md:hidden text-gray-500 hover:text-gray-700"
+            className="md:hidden text-slate-300 hover:text-white"
             onClick={() => setIsSidebarOpen(false)}
           >
             <span className="sr-only">Close</span>
@@ -62,8 +62,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-emerald-500 text-slate-950'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`
               }
             >
@@ -71,10 +71,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
           <button
             onClick={handleLogout}
-            className="w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            className="w-full px-3 py-2 text-sm font-medium text-red-200 hover:bg-red-500/15 rounded-md transition-colors"
           >
             Logout
           </button>
@@ -84,11 +84,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Mobile header */}
-        <header className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-gray-900">Admin Panel</h1>
+        <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <h1 className="text-base font-semibold text-slate-900">PocketTrade Admin</h1>
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-slate-600 hover:text-slate-900"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

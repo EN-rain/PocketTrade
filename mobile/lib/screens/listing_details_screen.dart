@@ -155,6 +155,15 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       },
                       icon: const Icon(Icons.flag_outlined),
                     ),
+                    if (l.seller != null)
+                      IconButton.filledTonal(
+                        tooltip: 'Block seller',
+                        onPressed: () async {
+                          await _api.blockUser(l.seller!.id);
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seller blocked')));
+                        },
+                        icon: const Icon(Icons.block),
+                      ),
                   ],
                 ),
               ],

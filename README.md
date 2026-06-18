@@ -10,6 +10,24 @@ PocketTrade is a used-phone PocketTrade with a NestJS backend, React admin panel
 
 ## Local Setup
 
+### One-click QA
+
+Run the automated QA suite from Windows:
+
+```powershell
+.\RUN_QA.bat
+```
+
+It runs backend tests/build, admin build, Flutter dependency/analyze/APK build, and a local API smoke/e2e flow when the backend can be started or reached at `http://localhost:3000`. Logs are written to `qa-results/`.
+
+Useful options:
+
+```powershell
+.\RUN_QA.bat -SkipApiE2E
+.\RUN_QA.bat -SkipApk
+.\RUN_QA.bat -BaseUrl http://localhost:3000
+```
+
 ```bash
 cd backend
 npm install

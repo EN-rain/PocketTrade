@@ -39,10 +39,13 @@ class _ChatScreenState extends State<ChatScreen> {
           .disableAutoConnect()
           .build(),
     );
-    _socket!.on('message:new', (payload) {
-      final data = Map<String, dynamic>.from(payload as Map);
-      if (data['conversationId'].toString() == widget.conversationId && mounted) {
-        setState(() => _messages.add(Map<String, dynamic>.from(data['message'] as Map)));
+    _socket!.onConnect((_) {
+      _socket!.emit('joinConversation', {'conversationId': int.parse(widget.conversationId)});
+    });
+    _socket!.on('messageCreated', (payload) {
+      final message = Map<String, dynamic>.from(payload as Map);
+      if (message['conversationId'].toString() == widget.conversationId && mounted) {
+        setState(() => _messages.add(message));
       }
     });
     _socket!.connect();

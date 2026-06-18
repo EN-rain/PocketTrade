@@ -30,6 +30,9 @@ export function Users() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [suspendTarget, setSuspendTarget] = useState<User | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<User | null>(null);
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -56,28 +59,30 @@ export function Users() {
     return () => { cancelled = true; };
   }, [page, statusFilter, refreshNonce]);
 
-  const handleSuspend = async (id: number) => {
-    const reason = window.prompt('Suspension reason (optional):');
-    if (reason === null) return;
-    setActionLoading(String(id));
+  const submitSuspend = async () => {
+    if (!suspendTarget) return;
+    setActionLoading(String(suspendTarget.id));
     try {
-      await api.post(`/admin/users/${id}/suspend`, { reason: reason || undefined });
+      await api.post(`/admin/users/${suspendTarget.id}/suspend`, { reason: reason.trim() || undefined });
+      setSuspendTarget(null);
+      setReason('');
       setRefreshNonce((n) => n + 1);
     } catch {
-      alert('Failed to suspend user');
+      setError('Failed to suspend user');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleRestore = async (id: number) => {
-    if (!window.confirm('Restore this user?')) return;
-    setActionLoading(String(id));
+  const submitRestore = async () => {
+    if (!restoreTarget) return;
+    setActionLoading(String(restoreTarget.id));
     try {
-      await api.post(`/admin/users/${id}/restore`);
+      await api.post(`/admin/users/${restoreTarget.id}/restore`);
+      setRestoreTarget(null);
       setRefreshNonce((n) => n + 1);
     } catch {
-      alert('Failed to restore user');
+      setError('Failed to restore user');
     } finally {
       setActionLoading(null);
     }
@@ -153,7 +158,10 @@ export function Users() {
                       <div className="flex justify-end gap-2">
                         {user.accountStatus === 'active' ? (
                           <button
-                            onClick={() => handleSuspend(user.id)}
+                            onClick={() => {
+                              setSuspendTarget(user);
+                              setReason('');
+                            }}
                             disabled={actionLoading === String(user.id)}
                             className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
                           >
@@ -161,7 +169,7 @@ export function Users() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleRestore(user.id)}
+                            onClick={() => setRestoreTarget(user)}
                             disabled={actionLoading === String(user.id)}
                             className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
                           >
@@ -203,6 +211,46 @@ export function Users() {
           </div>
         </div>
       </div>
+      {(suspendTarget || restoreTarget) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="admin-surface w-full max-w-md p-5">
+            <h2 className="text-lg font-semibold text-slate-950">
+              {suspendTarget ? 'Suspend user' : 'Restore user'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {(suspendTarget ?? restoreTarget)?.email}
+            </p>
+            {suspendTarget && (
+              <>
+                <label className="mt-4 block text-sm font-medium text-slate-700">Reason</label>
+                <input
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                />
+              </>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setSuspendTarget(null);
+                  setRestoreTarget(null);
+                  setReason('');
+                }}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={suspendTarget ? submitSuspend : submitRestore}
+                className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

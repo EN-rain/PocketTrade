@@ -4,6 +4,37 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-slate-100 text-slate-900 antialiased;
+    font-feature-settings: "tnum";
+  }
+
+  button,
+  select,
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  button:not(:disabled),
+  select,
+  a {
+    @apply cursor-pointer;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  .admin-surface {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+  }
+
+  .admin-page-title {
+    @apply text-2xl font-semibold tracking-normal text-slate-950;
+  }
+
+  .admin-filter {
+    @apply h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500;
   }
 }

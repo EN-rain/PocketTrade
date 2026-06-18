@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -7,6 +7,11 @@ export class BlocksService {
 
   async block(blockerId: number, blockedId: number) {
     if (blockerId === blockedId) throw new BadRequestException('Cannot block yourself');
+    const blocked = await this.prisma.user.findUnique({
+      where: { id: blockedId },
+      select: { id: true },
+    });
+    if (!blocked) throw new NotFoundException(`User ${blockedId} not found`);
     return this.prisma.blockedUser.upsert({
       where: { blockerId_blockedId: { blockerId, blockedId } },
       update: {},

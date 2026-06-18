@@ -33,13 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollCtrl.addListener(_handleScroll);
     _loadFirst();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_handleScroll);
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
   }
 
   Future<void> _loadFirst() async {
@@ -102,32 +111,58 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       body = RefreshIndicator(
         onRefresh: _loadFirst,
-        child: GridView.builder(
-          controller: _scrollCtrl
-            ..addListener(() {
-              if (_scrollCtrl.position.pixels >=
-                  _scrollCtrl.position.maxScrollExtent - 200) {
-                _loadMore();
-              }
-            }),
-          padding: const EdgeInsets.all(8),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.7,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          itemCount: _items.length + (_loadingMore ? 2 : 0),
-          itemBuilder: (context, i) {
-            if (i >= _items.length) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final l = _items[i];
-            return ListingCard(
-              listing: l,
-              onTap: () => context.push('/listing/${l.id}'),
-            );
-          },
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => context.go('/search'),
+                  child: Container(
+                    height: 52,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.search),
+                        SizedBox(width: 12),
+                        Text('Search brand, model, storage'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    if (i >= _items.length) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final l = _items[i];
+                    return ListingCard(
+                      listing: l,
+                      onTap: () => context.push('/listing/${l.id}'),
+                    );
+                  },
+                  childCount: _items.length + (_loadingMore ? 2 : 0),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }

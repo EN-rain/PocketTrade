@@ -21,6 +21,13 @@ class TokenStore extends ChangeNotifier {
   String? get refreshTokenSync => _refresh;
   Map<String, dynamic>? get userSync => _user;
 
+  Future<void> hydrate() async {
+    _access = await _storage.read(key: _accessKey);
+    _refresh = await _storage.read(key: _refreshKey);
+    await readUser();
+    notifyListeners();
+  }
+
   Future<String?> readAccess() async {
     _access = await _storage.read(key: _accessKey);
     return _access;

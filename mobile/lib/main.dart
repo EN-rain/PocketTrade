@@ -23,10 +23,15 @@ class PocketTradeApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E88E5),
+          seedColor: const Color(0xFF0F766E),
           brightness: Brightness.light,
         ),
-        appBarTheme: const AppBarTheme(centerTitle: false),
+        appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
+        cardTheme: const CardThemeData(
+          clipBehavior: Clip.antiAlias,
+          elevation: 0.5,
+          margin: EdgeInsets.zero,
+        ),
       ),
       routerConfig: appRouter(storage),
     );

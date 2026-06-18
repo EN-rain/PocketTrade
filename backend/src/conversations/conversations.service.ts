@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { BlocksService } from '../blocks/blocks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
+import { ConversationsGateway } from './conversations.gateway';
 
 @Injectable()
 export class ConversationsService {
@@ -9,12 +10,14 @@ export class ConversationsService {
     private readonly prisma: PrismaService,
     private readonly blocks: BlocksService,
     private readonly push: PushService,
+    private readonly gateway: ConversationsGateway,
   ) {}
 
   async start(buyerId: number, listingId: number) {
     await this.assertActive(buyerId);
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing) throw new NotFoundException(`Listing ${listingId} not found`);
+    if (listing.status !== 'active') throw new BadRequestException('Only active listings can be messaged');
     if (listing.sellerId === buyerId) throw new BadRequestException('Cannot message yourself');
     if (await this.blocks.isBlocked(buyerId, listing.sellerId)) throw new ForbiddenException('Messaging is blocked');
     return this.prisma.conversation.upsert({
@@ -54,6 +57,7 @@ export class ConversationsService {
       where: { id: conversationId },
       data: { lastMessageAt: new Date() },
     });
+    this.gateway.emitMessage(conversationId, message);
     await this.push.notifyUser(otherUserId, 'New message', content.slice(0, 120));
     return message;
   }

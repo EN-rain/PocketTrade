@@ -103,8 +103,8 @@ export class ListingsService {
   }
 
   async getById(id: number) {
-    const listing = await this.prisma.listing.findUnique({
-      where: { id },
+    const listing = await this.prisma.listing.findFirst({
+      where: { id, status: { in: ['active', 'sold'] } },
       include: this.includeListing().include,
     });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);

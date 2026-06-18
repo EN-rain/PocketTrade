@@ -32,6 +32,9 @@ export function Listings() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [brands, setBrands] = useState<string[]>([]);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [rejectTarget, setRejectTarget] = useState<Listing | null>(null);
+  const [priceTarget, setPriceTarget] = useState<Listing | null>(null);
+  const [modalValue, setModalValue] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -69,21 +72,22 @@ export function Listings() {
       await api.post(`/admin/listings/${id}/approve`);
       setRefreshNonce((n) => n + 1);
     } catch {
-      alert('Failed to approve listing');
+      setError('Failed to approve listing');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleReject = async (id: string) => {
-    const reason = window.prompt('Reason for rejection (optional):');
-    if (reason === null) return;
-    setActionLoading(id);
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    setActionLoading(String(rejectTarget.id));
     try {
-      await api.post(`/admin/listings/${id}/reject`, { reason: reason || undefined });
+      await api.post(`/admin/listings/${rejectTarget.id}/reject`, { reason: modalValue.trim() || undefined });
+      setRejectTarget(null);
+      setModalValue('');
       setRefreshNonce((n) => n + 1);
     } catch {
-      alert('Failed to reject listing');
+      setError('Failed to reject listing');
     } finally {
       setActionLoading(null);
     }
@@ -95,17 +99,30 @@ export function Listings() {
       await api.post(`/admin/listings/${id}/${action}`);
       setRefreshNonce((n) => n + 1);
     } catch {
-      alert(`Failed to ${action} listing`);
+      setError(`Failed to ${action} listing`);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleEditPrice = async (id: number) => {
-    const price = window.prompt('New price');
-    if (!price) return;
-    await api.patch(`/admin/listings/${id}`, { price: Number(price) });
-    setRefreshNonce((n) => n + 1);
+  const submitPrice = async () => {
+    if (!priceTarget) return;
+    const price = Number(modalValue);
+    if (!Number.isInteger(price) || price < 0) {
+      setError('Enter a valid whole-dollar price');
+      return;
+    }
+    setActionLoading(String(priceTarget.id));
+    try {
+      await api.patch(`/admin/listings/${priceTarget.id}`, { price });
+      setPriceTarget(null);
+      setModalValue('');
+      setRefreshNonce((n) => n + 1);
+    } catch {
+      setError('Failed to update listing price');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -127,6 +144,9 @@ export function Listings() {
             <option value="pending">Pending</option>
             <option value="active">Active</option>
             <option value="rejected">Rejected</option>
+            <option value="sold">Sold</option>
+            <option value="removed">Removed</option>
+            <option value="expired">Expired</option>
           </select>
           <select
             value={brandFilter}
@@ -213,7 +233,10 @@ export function Listings() {
                               Approve
                             </button>
                             <button
-                              onClick={() => handleReject(String(item.id))}
+                              onClick={() => {
+                                setRejectTarget(item);
+                                setModalValue('');
+                              }}
                               disabled={actionLoading === String(item.id)}
                               className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
                             >
@@ -223,7 +246,15 @@ export function Listings() {
                         )}
                         {item.status !== 'pending' && (
                           <>
-                            <button onClick={() => handleEditPrice(item.id)} className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded">Edit</button>
+                            <button
+                              onClick={() => {
+                                setPriceTarget(item);
+                                setModalValue(String(item.price));
+                              }}
+                              className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded"
+                            >
+                              Edit
+                            </button>
                             {item.status !== 'removed' && <button onClick={() => handleStatus(item.id, 'remove')} className="px-2 py-1 text-xs font-medium bg-gray-700 text-white rounded">Remove</button>}
                             {item.status === 'removed' && <button onClick={() => handleStatus(item.id, 'restore')} className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded">Restore</button>}
                           </>
@@ -263,6 +294,48 @@ export function Listings() {
           </div>
         </div>
       </div>
+      {(rejectTarget || priceTarget) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="admin-surface w-full max-w-md p-5">
+            <h2 className="text-lg font-semibold text-slate-950">
+              {rejectTarget ? 'Reject listing' : 'Edit price'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {rejectTarget
+                ? `${rejectTarget.brand} ${rejectTarget.model}`
+                : `${priceTarget?.brand ?? ''} ${priceTarget?.model ?? ''}`}
+            </p>
+            <label className="mt-4 block text-sm font-medium text-slate-700">
+              {rejectTarget ? 'Reason' : 'Price'}
+            </label>
+            <input
+              value={modalValue}
+              onChange={(e) => setModalValue(e.target.value)}
+              className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              type={rejectTarget ? 'text' : 'number'}
+              min={0}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setRejectTarget(null);
+                  setPriceTarget(null);
+                  setModalValue('');
+                }}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={rejectTarget ? submitReject : submitPrice}
+                className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

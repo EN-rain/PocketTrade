@@ -7,7 +7,9 @@ export class FavoritesService {
 
   async add(userId: number, listingId: number) {
     // Verify listing exists
-    const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
+    const listing = await this.prisma.listing.findFirst({
+      where: { id: listingId, status: { in: ['active', 'sold'] } },
+    });
     if (!listing) throw new NotFoundException(`Listing ${listingId} not found`);
 
     // Try to insert; if duplicate, return existing

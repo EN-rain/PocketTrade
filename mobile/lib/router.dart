@@ -24,9 +24,9 @@ GoRouter appRouter(FlutterSecureStorage storage) {
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: tokenStore,
-    redirect: (context, state) {
-      final hasToken = tokenStore.accessTokenSync != null &&
-          tokenStore.accessTokenSync!.isNotEmpty;
+    redirect: (context, state) async {
+      final accessToken = tokenStore.accessTokenSync ?? await tokenStore.readAccess();
+      final hasToken = accessToken != null && accessToken.isNotEmpty;
       final goingToLogin = state.matchedLocation == '/login';
       if (!hasToken && !goingToLogin) return '/login';
       if (hasToken && goingToLogin) return '/home';
@@ -107,6 +107,8 @@ class HomeShell extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
+        height: 68,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: index,
         onDestinationSelected: (i) {
           switch (i) {

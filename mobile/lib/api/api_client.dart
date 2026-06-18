@@ -150,5 +150,6 @@ class ApiClient {
 
   Future<void> report(Map<String, dynamic> data) async => _dio.post('/reports', data: data);
   Future<void> blockUser(String userId) async => _dio.post('/blocks/$userId');
+  Future<void> requestAccountDeletion() async => _dio.post('/users/me/delete-request');
   Future<void> registerPushToken(String token, String platform) async => _dio.post('/push-tokens', data: {'token': token, 'platform': platform});
 }

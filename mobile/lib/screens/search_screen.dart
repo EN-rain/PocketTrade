@@ -19,6 +19,9 @@ class _SearchScreenState extends State<SearchScreen> {
   final _qCtrl = TextEditingController();
   final _brandCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _storageCtrl = TextEditingController();
+  final _minPriceCtrl = TextEditingController();
+  final _maxPriceCtrl = TextEditingController();
   String _sort = 'newest';
   String? _condition;
   List<Listing> _items = [];
@@ -32,6 +35,9 @@ class _SearchScreenState extends State<SearchScreen> {
       q: _qCtrl.text.trim(),
       brand: _brandCtrl.text.trim(),
       location: _locationCtrl.text.trim(),
+      storage: _storageCtrl.text.trim(),
+      minPrice: int.tryParse(_minPriceCtrl.text.trim()),
+      maxPrice: int.tryParse(_maxPriceCtrl.text.trim()),
       condition: _condition,
       sort: _sort,
     );
@@ -50,6 +56,17 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   @override
+  void dispose() {
+    _qCtrl.dispose();
+    _brandCtrl.dispose();
+    _locationCtrl.dispose();
+    _storageCtrl.dispose();
+    _minPriceCtrl.dispose();
+    _maxPriceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Search')),
@@ -65,6 +82,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   Expanded(child: TextField(controller: _brandCtrl, decoration: const InputDecoration(labelText: 'Brand', border: OutlineInputBorder()))),
                   const SizedBox(width: 8),
                   Expanded(child: TextField(controller: _locationCtrl, decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()))),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: TextField(controller: _storageCtrl, decoration: const InputDecoration(labelText: 'Storage', border: OutlineInputBorder()))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: _minPriceCtrl, decoration: const InputDecoration(labelText: 'Min price', border: OutlineInputBorder()), keyboardType: TextInputType.number)),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: _maxPriceCtrl, decoration: const InputDecoration(labelText: 'Max price', border: OutlineInputBorder()), keyboardType: TextInputType.number)),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [

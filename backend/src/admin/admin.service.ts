@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { ListingStatus, ReportStatus } from '@prisma/client';
+import { ListingCondition, ListingStatus, ReportStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminListingsQueryDto } from './dto/admin-listings-query.dto';
@@ -120,7 +120,9 @@ export class AdminService {
   async updateListing(id: number, adminId: number, dto: Record<string, unknown>) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
-    const updated = await this.prisma.listing.update({ where: { id }, data: dto as any });
+    const data = this.sanitizeListingUpdate(dto);
+    if (Object.keys(data).length === 0) throw new BadRequestException('No editable listing fields provided');
+    const updated = await this.prisma.listing.update({ where: { id }, data });
     await this.log(adminId, 'edit_listing', 'listing', id, listing, updated);
     return updated;
   }
@@ -260,5 +262,33 @@ export class AdminService {
         newValue: newValue as object,
       },
     });
+  }
+
+  private sanitizeListingUpdate(dto: Record<string, unknown>) {
+    const data: {
+      brand?: string;
+      model?: string;
+      price?: number;
+      condition?: ListingCondition;
+      storage?: string;
+      colour?: string | null;
+      description?: string;
+      location?: string;
+    } = {};
+    const stringFields = ['brand', 'model', 'storage', 'description', 'location'] as const;
+    for (const field of stringFields) {
+      const value = dto[field];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        data[field] = value.trim();
+      }
+    }
+    if (typeof dto.colour === 'string') data.colour = dto.colour.trim() || null;
+    if (typeof dto.price === 'number' && Number.isInteger(dto.price) && dto.price >= 0) {
+      data.price = dto.price;
+    }
+    if (typeof dto.condition === 'string' && Object.values(ListingCondition).includes(dto.condition as ListingCondition)) {
+      data.condition = dto.condition as ListingCondition;
+    }
+    return data;
   }
 }

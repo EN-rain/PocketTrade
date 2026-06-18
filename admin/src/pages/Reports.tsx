@@ -4,19 +4,26 @@ import { api } from '../lib/api.js';
 export function Reports() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
 
   const load = async () => {
     setLoading(true);
-    const res = await api.get(`/reports${status ? `?status=${status}` : ''}`);
-    setItems(res.data);
-    setLoading(false);
+    setError(null);
+    try {
+      const res = await api.get(`/admin/reports${status ? `?status=${status}` : ''}`);
+      setItems(res.data.items ?? []);
+    } catch {
+      setError('Failed to load reports');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { void load(); }, [status]);
 
   const resolve = async (id: number, next: string) => {
-    await api.post(`/reports/${id}/resolve`, { status: next });
+    await api.post(`/admin/reports/${id}/${next === 'dismissed' ? 'dismiss' : 'resolve'}`);
     await load();
   };
 
@@ -31,6 +38,7 @@ export function Reports() {
           <option value="dismissed">Dismissed</option>
         </select>
       </div>
+      {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">{error}</div>}
       {loading ? <div>Loading...</div> : (
         <div className="bg-white border rounded-lg divide-y">
           {items.map((r) => (

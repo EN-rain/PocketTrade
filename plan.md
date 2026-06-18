@@ -63,10 +63,10 @@ Alternative:
 
 ### Supporting Services
 
-* Redis for OTP expiration, rate limiting, and caching
+* PostgreSQL-backed OTP expiration and NestJS throttling
 * Firebase Cloud Messaging for push notifications
-* Cloudinary, Amazon S3, or compatible object storage for listing photos
-* SMS provider for OTP delivery
+* Cloudinary free tier for listing photos
+* Resend free tier for email OTP delivery
 * Docker for deployment
 
 ---
@@ -79,7 +79,7 @@ A single user account may act as both a buyer and seller.
 
 Users can:
 
-* Log in using a mobile number and OTP
+* Log in using an email address and OTP
 * Browse and search listings
 * Publish phone listings
 * Edit or remove their own listings
@@ -110,8 +110,8 @@ The administrator has full access to:
 
 ### User flow
 
-1. User enters their mobile number.
-2. System sends a one-time password.
+1. User enters their email address.
+2. System sends a one-time password by email.
 3. User enters the OTP.
 4. Backend verifies the code.
 5. A new account is created automatically when the number is not registered.
@@ -122,7 +122,7 @@ The administrator has full access to:
 * OTP expiration
 * Resend cooldown
 * Maximum verification attempts
-* Rate limiting by mobile number and IP address
+* Rate limiting by email address and IP address
 * Secure access and refresh tokens
 * Logout from the current device
 
@@ -213,7 +213,7 @@ Each listing page will show:
 * Report button
 * Message Seller button
 
-Phone numbers and email addresses will not be displayed.
+Email addresses will not be displayed on public listings.
 
 ---
 
@@ -869,7 +869,7 @@ The project will be considered complete when:
 * Approved listings appear in PocketTrade searches.
 * Buyers can filter listings by brand, model, price, and location.
 * A buyer can start an in-app conversation with a seller.
-* Email addresses and mobile numbers are not publicly exposed.
+* Email addresses are not publicly exposed on listings.
 * Sellers can edit, remove, and mark listings as sold.
 * The administrator can edit or remove listings.
 * The administrator can suspend and restore accounts.
@@ -898,7 +898,7 @@ The following should be treated as future enhancements unless separately include
 * AI-based price recommendations
 * iOS application
 * Multi-language support
-* Phone-number portability between accounts
+* Phone-number login
 * Voice or video calling
 
 ---
@@ -908,8 +908,8 @@ The following should be treated as future enhancements unless separately include
 The following decisions should be finalized during the planning phase:
 
 1. Whether listings require approval before becoming public.
-2. Which countries and mobile-number formats will be supported.
-3. Which SMS provider will deliver OTP messages.
+2. Which countries and locations will be supported for listings.
+3. Which free email sender configuration will deliver OTP messages.
 4. Whether users may enter custom phone models.
 5. Maximum number and size of listing photos.
 6. Whether sellers can share contact details inside messages.
@@ -941,4 +941,4 @@ At project completion, the client will receive:
 * One live deployment to the client's hosting
 * Basic administrator usage documentation
 
-A sensible first release should focus on OTP login, listings, search, filters, messaging, moderation, and essential analytics. Payments, delivery, ratings, and identity verification can be added after the PocketTrade has active users.
+A sensible first release should focus on free-tier email OTP login, listings, search, filters, messaging, moderation, and essential analytics. Payments, delivery, ratings, identity verification, and paid promotions can be considered only after PocketTrade has active users and a budget.

@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
-    "@nestjs/config": "^3.1.1",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^10.3.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
@@ -67,7 +67,6 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.2.0",
     "jest": "^30.4.2",
-    "localtunnel": "^2.0.2",
     "nodemon": "^3.0.2",
     "prisma": "^5.7.1",
     "supertest": "^7.2.2",
