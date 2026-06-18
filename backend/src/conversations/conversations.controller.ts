@@ -1,13 +1,15 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ConversationsService } from './conversations.service';
+import { SendMessageDto } from './dto/send-message.dto';
+import { StartConversationDto } from './dto/start-conversation.dto';
 
 @Controller('conversations')
 export class ConversationsController {
   constructor(private readonly conversations: ConversationsService) {}
 
   @Post()
-  async start(@CurrentUser() user: { id: number }, @Body() dto: { listingId: number }) {
+  async start(@CurrentUser() user: { id: number }, @Body() dto: StartConversationDto) {
     return this.conversations.start(user.id, dto.listingId);
   }
 
@@ -25,7 +27,7 @@ export class ConversationsController {
   async send(
     @CurrentUser() user: { id: number },
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: { content: string },
+    @Body() dto: SendMessageDto,
   ) {
     return this.conversations.send(user.id, id, dto.content);
   }

@@ -283,7 +283,7 @@ export class AdminService {
       }
     }
     if (typeof dto.colour === 'string') data.colour = dto.colour.trim() || null;
-    if (typeof dto.price === 'number' && Number.isInteger(dto.price) && dto.price >= 0) {
+    if (typeof dto.price === 'number' && Number.isInteger(dto.price) && dto.price >= 1) {
       data.price = dto.price;
     }
     if (typeof dto.condition === 'string' && Object.values(ListingCondition).includes(dto.condition as ListingCondition)) {

@@ -21,7 +21,7 @@ export class CreateListingDto {
 
   @Type(() => Number)
   @IsInt()
-  @Min(0)
+  @Min(1)
   price: number;
 
   @IsEnum(ListingCondition)

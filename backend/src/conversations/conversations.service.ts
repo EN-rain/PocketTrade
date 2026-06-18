@@ -46,19 +46,21 @@ export class ConversationsService {
 
   async send(userId: number, conversationId: number, content: string) {
     await this.assertActive(userId);
+    const trimmedContent = content.trim();
+    if (!trimmedContent) throw new BadRequestException('Message content is required');
     const conversation = await this.assertParticipant(userId, conversationId);
     const otherUserId = conversation.buyerId === userId ? conversation.sellerId : conversation.buyerId;
     if (await this.blocks.isBlocked(userId, otherUserId)) throw new ForbiddenException('Messaging is blocked');
     const message = await this.prisma.message.create({
-      data: { conversationId, senderId: userId, content },
-      include: { sender: { select: { id: true, email: true, displayName: true } } },
+      data: { conversationId, senderId: userId, content: trimmedContent },
+      include: { sender: { select: { id: true, displayName: true } } },
     });
     await this.prisma.conversation.update({
       where: { id: conversationId },
       data: { lastMessageAt: new Date() },
     });
     this.gateway.emitMessage(conversationId, message);
-    await this.push.notifyUser(otherUserId, 'New message', content.slice(0, 120));
+    await this.push.notifyUser(otherUserId, 'New message', trimmedContent.slice(0, 120));
     return message;
   }
 
@@ -87,8 +89,8 @@ export class ConversationsService {
   private includeConversation() {
     return {
       listing: { include: { images: { orderBy: { displayOrder: 'asc' as const } } } },
-      buyer: { select: { id: true, email: true, displayName: true } },
-      seller: { select: { id: true, email: true, displayName: true } },
+      buyer: { select: { id: true, displayName: true } },
+      seller: { select: { id: true, displayName: true } },
       messages: { orderBy: { createdAt: 'desc' as const }, take: 1 },
     };
   }

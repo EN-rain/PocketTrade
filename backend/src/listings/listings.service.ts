@@ -21,6 +21,9 @@ export class ListingsService {
 
   async create(sellerId: number, dto: CreateListingDto, files: Express.Multer.File[]) {
     await this.assertActiveUser(sellerId);
+    for (const file of files) {
+      this.assertValidImage(file);
+    }
     const uploaded = [];
     try {
       for (const [index, file] of files.entries()) {
@@ -170,5 +173,33 @@ export class ListingsService {
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
     if (listing.sellerId !== sellerId) throw new ForbiddenException('Listing belongs to another seller');
     return listing;
+  }
+
+  private assertValidImage(file: Express.Multer.File) {
+    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    if (!allowedMimeTypes.has(file.mimetype)) {
+      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+    }
+
+    const bytes = file.buffer;
+    const isJpeg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    const isPng =
+      bytes.length > 8 &&
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a;
+    const isWebp =
+      bytes.length > 12 &&
+      bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+
+    if (!isJpeg && !isPng && !isWebp) {
+      throw new BadRequestException('Uploaded file content is not a supported image');
+    }
   }
 }

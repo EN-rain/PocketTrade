@@ -1,58 +1,46 @@
 ==> Preparing test photo...
-  Photo ready: 6.5K
+  Photo ready
 
 STEP 0: Health check
   HTTP 200
   -> PASS
 
-STEP 1: Request OTP
+STEP 1: Request email OTP
   HTTP 200
-{"success":true,"message":"OTP sent","expiresAt":"2026-06-17T04:46:31.029Z"}
-
-  devCode not in response (production mode). Trying Docker logs...
-  devCode: 472555
+{"success":true,"message":"OTP sent","expiresAt":"<redacted>"}
   -> PASS
 
 STEP 2: Verify OTP
   HTTP 200
-{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjksIm1vYmlsZU51bWJlciI6IisxNTU1MTIzNDU2NyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzgxNjcxMjkzLCJleHAiOjE3ODE2NzIxOTN9.biKZ8lKvCz1sYYS20nQsm7uTY1vciDQIb4mjeRGYoWI","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjksInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzgxNjcxMjkzLCJleHAiOjE3ODQyNjMyOTN9.5lEDCaRHXQ5xzkIDdfwmtzm9-ex47GAOmRdH7yq8tz8","user":{"id":9,"mobileNumber":"+15551234567","role":"user"},"isNewUser":false}
-
-  JWT (first 60 chars): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjksIm1vYmlsZU5...
+{"accessToken":"<redacted>","refreshToken":"<redacted>","user":{"id":9,"email":"<redacted>","role":"user","displayName":null},"isNewUser":false}
   -> PASS
 
 STEP 3: Create listing (multipart upload)
   HTTP 201
-{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"pending","createdAt":"2026-06-17T04:41:35.522Z","updatedAt":"2026-06-17T04:41:35.522Z","images":[{"id":12,"listingId":12,"imageUrl":"https://res.cloudinary.com/dyoaiyzzg/image/upload/v1781671295/PocketTrade/listings/1781671294452-photo.jpg.jpg","displayOrder":0}]}
-
-  Created listing id: 12
-  Cloudinary image URL: https://res.cloudinary.com/dyoaiyzzg/image/upload/v1781671295/PocketTrade/listings/1781671294452-photo.jpg.jpg
+{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"pending","createdAt":"<redacted>","updatedAt":"<redacted>","images":[{"id":12,"listingId":12,"imageUrl":"<redacted>","displayOrder":0}]}
   -> PASS
 
 STEP 4: Confirm listing exists (admin pending view)
   Admin login HTTP 200
-  Admin JWT (first 60 chars): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsIm1vYmlsZU5...
   Admin pending listings HTTP 200
   -> PASS
 
 STEP 5: Admin approve listing
   HTTP 200
-{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"active","createdAt":"2026-06-17T04:41:35.522Z","updatedAt":"2026-06-17T04:41:40.722Z"}
-
+{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"active","createdAt":"<redacted>","updatedAt":"<redacted>"}
   -> PASS
 
 STEP 6: Confirm listing status is active
   HTTP 200
-{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"active","createdAt":"2026-06-17T04:41:35.522Z","updatedAt":"2026-06-17T04:41:40.722Z","images":[{"id":12,"listingId":12,"imageUrl":"https://res.cloudinary.com/dyoaiyzzg/image/upload/v1781671295/PocketTrade/listings/1781671294452-photo.jpg.jpg","displayOrder":0}],"seller":{"id":9,"displayName":null}}
-
-  Listing status: active
+{"id":12,"sellerId":9,"brand":"Apple","model":"iPhone 14","price":699,"condition":"good","storage":"128GB","colour":"Midnight","description":"A well cared-for iPhone 14 with 128GB storage.","location":"New York, NY","status":"active","createdAt":"<redacted>","updatedAt":"<redacted>","images":[{"id":12,"listingId":12,"imageUrl":"<redacted>","displayOrder":0}],"seller":{"id":9,"displayName":null}}
   -> PASS
 
 ========================================
   E2E HAPPY PATH: ALL STEPS PASSED
 ========================================
   Listing ID:        12
-  Photo URL:         https://res.cloudinary.com/dyoaiyzzg/image/upload/v1781671295/PocketTrade/listings/1781671294452-photo.jpg.jpg
-  Mobile:            +15551234567
-  Admin:             admin@example.com
+  Photo URL:         <redacted>
+  Test email:        <redacted>
+  Admin:             <redacted>
   Backend:           http://localhost:3000
 ========================================
