@@ -18,7 +18,7 @@ export class AdminService {
 
   async login(dto: AdminLoginDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
-    if (!user || user.role !== 'admin' || !user.passwordHash) {
+    if (!user || user.role !== 'admin' || user.accountStatus !== 'active' || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);

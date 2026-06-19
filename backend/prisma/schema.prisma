@@ -32,7 +32,6 @@ enum UserRole {
 // ----------------------------------------------------------
 model User {
   id           Int            @id @default(autoincrement())
-  mobileNumber String?        @unique @map("mobile_number")
   email        String         @unique @map("email")
   displayName  String?        @map("display_name")
   profileImage String?        @map("profile_image")
@@ -59,7 +58,6 @@ model User {
   reportedReports     Report[]        @relation("Reporter")
   reportedUsers       Report[]        @relation("ReportedUser")
 
-  @@index([mobileNumber])
   @@index([email])
   @@map("users")
 }

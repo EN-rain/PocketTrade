@@ -9,7 +9,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) return null;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, mobileNumber, ...rest } = user;
+    const { passwordHash, ...rest } = user;
     return rest;
   }
 
@@ -27,7 +27,7 @@ export class UsersService {
       },
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, mobileNumber, ...rest } = user;
+    const { passwordHash, ...rest } = user;
     return rest;
   }
 
