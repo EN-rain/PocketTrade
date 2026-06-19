@@ -15,7 +15,7 @@ import 'storage/secure_storage.dart';
 
 const _apiUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://localhost:3000',
+  defaultValue: 'http://10.0.2.2:3000',
 );
 
 GoRouter appRouter(FlutterSecureStorage storage) {

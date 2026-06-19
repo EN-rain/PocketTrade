@@ -27,12 +27,12 @@ docs/      Supporting notes and test output
 - PostgreSQL
 - Flutter SDK and Android SDK
 - Cloudinary account
-- Resend account for production email OTP
+- Mailjet account for production email OTP
 - Firebase project for push notifications
 
 ## Backend setup
 
-Copy `.env.example` to `backend/.env` and fill in the database, JWT, Cloudinary, admin, Resend, Firebase, and CORS values.
+Copy `.env.example` to `backend/.env` and fill in the database, JWT, Cloudinary, admin, Mailjet, Firebase, and CORS values.
 
 ```bash
 cd backend
@@ -63,7 +63,7 @@ Development buyer email:
 buyer@pockettrade.local
 ```
 
-In development, the OTP response includes `devCode`. Production sends the code through Resend.
+In development, the OTP response includes `devCode`. Production sends the code through Mailjet.
 
 ## Admin setup
 

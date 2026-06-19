@@ -34,8 +34,10 @@ CLOUDINARY_API_SECRET=
 Email OTP:
 
 ```env
-RESEND_API_KEY=
-OTP_FROM_EMAIL=PocketTrade <otp@your-domain.example>
+MAILJET_API_KEY=
+MAILJET_API_SECRET=
+MAILJET_FROM_EMAIL=verified_sender@example.com
+MAILJET_FROM_NAME=PocketTrade
 ```
 
 Push notifications:

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,7 +10,6 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomUUID } from 'crypto';
-import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -35,18 +35,12 @@ type AuthResponse = {
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly resend?: Resend;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-  ) {
-    const apiKey = this.config.get<string>('RESEND_API_KEY');
-    if (apiKey) {
-      this.resend = new Resend(apiKey);
-    }
-  }
+  ) {}
 
   async register(dto: RegisterDto): Promise<OtpResponse> {
     const email = dto.email.trim().toLowerCase();
@@ -301,16 +295,43 @@ export class AuthService {
   }
 
   private async deliverOtp(email: string, code: string): Promise<void> {
-    if (!this.resend || process.env.NODE_ENV !== 'production') {
+    const apiKey = this.config.get<string>('MAILJET_API_KEY');
+    const apiSecret = this.config.get<string>('MAILJET_API_SECRET');
+    const fromEmail = this.config.get<string>('MAILJET_FROM_EMAIL');
+    const fromName = this.config.get<string>('MAILJET_FROM_NAME', 'PocketTrade');
+
+    if (process.env.NODE_ENV !== 'production') {
       this.logger.log(`[OTP] email=${email} code=${code}`);
       return;
     }
-    await this.resend.emails.send({
-      from: this.config.get<string>('OTP_FROM_EMAIL', 'PocketTrade <otp@example.com>'),
-      to: email,
-      subject: 'Your PocketTrade verification code',
-      text: `Your PocketTrade verification code is ${code}. It expires in 5 minutes.`,
+
+    if (!apiKey || !apiSecret || !fromEmail) {
+      throw new InternalServerErrorException('Mailjet email delivery is not configured');
+    }
+
+    const response = await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: fromEmail, Name: fromName },
+            To: [{ Email: email }],
+            Subject: 'Your PocketTrade verification code',
+            TextPart: `Your PocketTrade verification code is ${code}. It expires in 5 minutes.`,
+          },
+        ],
+      }),
     });
+
+    if (!response.ok) {
+      const body = await response.text();
+      this.logger.error(`Mailjet send failed with HTTP ${response.status}: ${body}`);
+      throw new InternalServerErrorException('Failed to send verification email');
+    }
   }
 
   private hashToken(token: string): string {

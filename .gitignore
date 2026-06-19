@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.deploy-notes.local.md
 *.log
 qa-results/
 mobile/android/app/google-services.json
