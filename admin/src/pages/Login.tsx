@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import pocketTradeBackground from '../assets/pockettrade-background.png';
+import pocketTradeBackground from '../assets/pockettrade-background.jpg';
 
 interface LoginResponse {
   accessToken: string;

@@ -13,6 +13,7 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -74,7 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="border-t border-slate-800 p-3">
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="w-full px-3 py-2 text-sm font-medium text-red-200 hover:bg-red-500/15 rounded-md transition-colors"
             >
               Logout
@@ -99,6 +100,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </header>
         <main className="mx-auto w-full max-w-[1440px] p-4 sm:p-5 lg:p-6">{children}</main>
       </div>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="admin-surface w-full max-w-sm p-5">
+            <h2 className="text-lg font-semibold text-slate-950">Log out?</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              You will need to sign in again to manage PocketTrade.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

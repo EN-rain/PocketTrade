@@ -38,46 +38,48 @@ export class AdminService {
   async dashboard() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60_000);
     const [
-      totalUsers,
-      activeUsers,
-      suspendedUsers,
-      totalListings,
-      pendingListings,
-      activeListings,
-      rejectedListings,
+      userStatusCounts,
+      listingStatusCounts,
       totalReports,
       totalFavorites,
       totalMessages,
+      newUsersLast7Days,
+      newListingsLast7Days,
       recentListings,
       recentActivity,
     ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { accountStatus: 'active' } }),
-      this.prisma.user.count({ where: { accountStatus: 'suspended' } }),
-      this.prisma.listing.count(),
-      this.prisma.listing.count({ where: { status: 'pending' } }),
-      this.prisma.listing.count({ where: { status: 'active' } }),
-      this.prisma.listing.count({ where: { status: 'rejected' } }),
+      this.prisma.user.groupBy({ by: ['accountStatus'], _count: { _all: true } }),
+      this.prisma.listing.groupBy({ by: ['status'], _count: { _all: true } }),
       this.prisma.report.count(),
       this.prisma.favorite.count(),
       this.prisma.message.count(),
-      this.prisma.listing.findMany({ orderBy: { createdAt: 'desc' }, take: 8 }),
+      this.prisma.user.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
+      this.prisma.listing.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
+      this.prisma.listing.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: { id: true, brand: true, model: true, price: true, status: true, createdAt: true },
+      }),
       this.prisma.adminActivityLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
     ]);
+    const userCounts = Object.fromEntries(userStatusCounts.map((row) => [row.accountStatus, row._count._all]));
+    const listingCounts = Object.fromEntries(listingStatusCounts.map((row) => [row.status, row._count._all]));
+    const totalUsers = Object.values(userCounts).reduce((sum, count) => sum + count, 0);
+    const totalListings = Object.values(listingCounts).reduce((sum, count) => sum + count, 0);
     return {
       metrics: {
         totalUsers,
-        activeUsers,
-        suspendedUsers,
+        activeUsers: userCounts.active ?? 0,
+        suspendedUsers: userCounts.suspended ?? 0,
         totalListings,
-        pendingListings,
-        activeListings,
-        rejectedListings,
+        pendingListings: listingCounts.pending ?? 0,
+        activeListings: listingCounts.active ?? 0,
+        rejectedListings: listingCounts.rejected ?? 0,
         totalReports,
         totalFavorites,
         totalMessages,
-        newUsersLast7Days: await this.prisma.user.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
-        newListingsLast7Days: await this.prisma.listing.count({ where: { createdAt: { gt: sevenDaysAgo } } }),
+        newUsersLast7Days,
+        newListingsLast7Days,
       },
       recentListings,
       recentActivity: recentActivity.map((a) => ({
@@ -211,7 +213,7 @@ export class AdminService {
   async listReports(status: ReportStatus | undefined, page: number, limit: number) {
     const where = status ? { status } : {};
     const skip = (Math.max(page, 1) - 1) * Math.min(limit, 100);
-    const take = Math.min(Math.max(limit, 1), 100);
+    const take = Math.min(Math.max(limit, 1), 25);
     const [items, total] = await Promise.all([
       this.prisma.report.findMany({
         where,
@@ -221,8 +223,16 @@ export class AdminService {
         include: {
           reporter: { select: { id: true, email: true, displayName: true } },
           reportedUser: { select: { id: true, email: true, displayName: true } },
-          reportedListing: { include: { images: true } },
-          conversation: { include: { messages: { orderBy: { createdAt: 'asc' }, take: 50 } } },
+          reportedListing: { select: { id: true, brand: true, model: true, status: true } },
+          conversation: {
+            include: {
+              messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                select: { id: true, senderId: true, content: true, createdAt: true },
+              },
+            },
+          },
         },
       }),
       this.prisma.report.count({ where }),
