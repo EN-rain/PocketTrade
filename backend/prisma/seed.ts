@@ -1,6 +1,5 @@
 import { PrismaClient, ListingCondition } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -20,7 +19,9 @@ const BRANDS = [
 ];
 
 const API_PUBLIC_URL = process.env.API_PUBLIC_URL || 'http://localhost:3000';
-const SEED_PHONE_IMAGE_URL = `${API_PUBLIC_URL}/assets/seed-phone.jpg`;
+const assetUrl = (path: string) => `${API_PUBLIC_URL}/assets/seed/${path}`;
+const phoneImageUrl = (index: number) => assetUrl(`phones/phone-${String(index).padStart(2, '0')}.jpg`);
+const profileImageUrl = (index: number) => assetUrl(`profiles/profile-${String(index).padStart(2, '0')}.jpg`);
 
 const SELLERS = [
   ['Miguel Santos', 'miguel.santos', 'Quezon City'],
@@ -77,26 +78,21 @@ const PHONES: Array<{
 ];
 
 async function seedAdmin() {
-  const adminEmail = process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@pockettrade.local';
-  let password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
-  let generated = false;
+  const adminEmail = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
 
-  if (!password || password === 'replace_with_random_password' || password.length < 8) {
-    password = crypto.randomBytes(18).toString('base64url');
-    generated = true;
+  if (!adminEmail || !password || password.length < 12) {
+    throw new Error('Set ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD with a password of at least 12 characters before seeding');
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { passwordHash, role: 'admin', displayName: 'PocketTrade Admin', accountStatus: 'active' },
-    create: { email: adminEmail, passwordHash, role: 'admin', displayName: 'PocketTrade Admin', accountStatus: 'active' },
+    update: { passwordHash, role: 'admin', displayName: 'PocketTrade Admin', profileImage: profileImageUrl(2), accountStatus: 'active' },
+    create: { email: adminEmail, passwordHash, role: 'admin', displayName: 'PocketTrade Admin', profileImage: profileImageUrl(2), accountStatus: 'active' },
   });
 
   console.log(`Admin ready: ${admin.email}`);
-  if (generated) {
-    console.log(`Generated admin password: ${password}`);
-  }
 }
 
 async function main() {
@@ -106,10 +102,11 @@ async function main() {
 
   await seedAdmin();
 
+  const buyerEmail = process.env.SEED_BUYER_EMAIL?.trim().toLowerCase() || 'buyer@pockettrade.local';
   const buyer = await prisma.user.upsert({
-    where: { email: 'buyer@pockettrade.local' },
-    update: { displayName: 'Life Lessheart', location: 'Quezon City', accountStatus: 'active', role: 'user' },
-    create: { email: 'buyer@pockettrade.local', displayName: 'Life Lessheart', location: 'Quezon City', accountStatus: 'active', role: 'user' },
+    where: { email: buyerEmail },
+    update: { displayName: 'Life Lessheart', profileImage: profileImageUrl(1), location: 'Quezon City', accountStatus: 'active', role: 'user' },
+    create: { email: buyerEmail, displayName: 'Life Lessheart', profileImage: profileImageUrl(1), location: 'Quezon City', accountStatus: 'active', role: 'user' },
   });
 
   const sellers = [];
@@ -117,8 +114,8 @@ async function main() {
     const [displayName, emailPrefix, location] = SELLERS[i];
     const seller = await prisma.user.upsert({
       where: { email: `${emailPrefix}@pockettrade.local` },
-      update: { displayName, location, accountStatus: 'active', role: 'user' },
-      create: { email: `${emailPrefix}@pockettrade.local`, displayName, location, accountStatus: 'active', role: 'user' },
+      update: { displayName, profileImage: profileImageUrl(i + 3), location, accountStatus: 'active', role: 'user' },
+      create: { email: `${emailPrefix}@pockettrade.local`, displayName, profileImage: profileImageUrl(i + 3), location, accountStatus: 'active', role: 'user' },
     });
     sellers.push(seller);
   }
@@ -144,7 +141,8 @@ async function main() {
         createdAt: new Date(Date.now() - i * 3_600_000),
         images: {
           create: [
-            { imageUrl: SEED_PHONE_IMAGE_URL, displayOrder: 0 },
+            { imageUrl: phoneImageUrl(i * 2 + 1), displayOrder: 0 },
+            { imageUrl: phoneImageUrl(i * 2 + 2), displayOrder: 1 },
           ],
         },
       },
@@ -215,7 +213,7 @@ async function main() {
   ]);
 
   console.log(`Seed complete: ${counts[0]} local users, ${counts[1]} listings, ${counts[2]} chats, ${counts[3]} messages`);
-  console.log('Demo buyer email: buyer@pockettrade.local');
+  console.log(`Demo buyer email: ${buyer.email}`);
 }
 
 main()

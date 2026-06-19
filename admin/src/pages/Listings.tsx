@@ -108,8 +108,8 @@ export function Listings() {
   const submitPrice = async () => {
     if (!priceTarget) return;
     const price = Number(modalValue);
-    if (!Number.isInteger(price) || price < 0) {
-      setError('Enter a valid whole-dollar price');
+    if (!Number.isInteger(price) || price < 1) {
+      setError('Enter a valid whole-number price above zero');
       return;
     }
     setActionLoading(String(priceTarget.id));
@@ -214,7 +214,7 @@ export function Listings() {
                     <td className="px-4 md:px-6 py-3 font-mono text-xs text-gray-500">{item.id}</td>
                     <td className="px-4 md:px-6 py-3 font-medium text-gray-900">{item.brand}</td>
                     <td className="px-4 md:px-6 py-3 text-gray-600">{item.model}</td>
-                    <td className="px-4 md:px-6 py-3 text-gray-900">${Number(item.price).toLocaleString()}</td>
+                    <td className="px-4 md:px-6 py-3 text-gray-900">₱{Number(item.price).toLocaleString('en-PH')}</td>
                     <td className="px-4 md:px-6 py-3">
                       <StatusBadge status={item.status} />
                     </td>
@@ -313,7 +313,7 @@ export function Listings() {
               onChange={(e) => setModalValue(e.target.value)}
               className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
               type={rejectTarget ? 'text' : 'number'}
-              min={0}
+              min={1}
             />
             <div className="mt-5 flex justify-end gap-2">
               <button

@@ -11,6 +11,7 @@
     "start:dev": "nodemon --exec ts-node src/main.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "assets:download": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\scripts\\download-seed-images.ps1",
     "prisma:seed": "ts-node prisma/seed.ts",
     "seed": "ts-node prisma/seed.ts",
     "test": "jest --runInBand"

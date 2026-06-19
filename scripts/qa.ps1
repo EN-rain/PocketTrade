@@ -26,10 +26,17 @@ if (-not $env:NODE_ENV) {
   $env:NODE_ENV = "development"
 }
 if (-not $env:ADMIN_BOOTSTRAP_EMAIL) {
-  $env:ADMIN_BOOTSTRAP_EMAIL = "admin@example.com"
+  $env:ADMIN_BOOTSTRAP_EMAIL = "qa-admin-{0}@example.invalid" -f ([guid]::NewGuid().ToString("N").Substring(0, 12))
 }
 if (-not $env:ADMIN_BOOTSTRAP_PASSWORD) {
-  $env:ADMIN_BOOTSTRAP_PASSWORD = "TestAdminPass123!"
+  $passwordBytes = New-Object byte[] 24
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($passwordBytes)
+  } finally {
+    $rng.Dispose()
+  }
+  $env:ADMIN_BOOTSTRAP_PASSWORD = [Convert]::ToBase64String($passwordBytes)
 }
 
 function Write-Line($Message) {
@@ -143,8 +150,10 @@ function Invoke-ApiE2E {
   $email = "qa-{0}@example.com" -f ([guid]::NewGuid().ToString("N").Substring(0, 10))
   $adminEmail = $env:ADMIN_BOOTSTRAP_EMAIL
   $adminPassword = $env:ADMIN_BOOTSTRAP_PASSWORD
-  $photo = Join-Path $ResultsDir "qa-photo.jpg"
-  [IO.File]::WriteAllBytes($photo, [byte[]](0xff, 0xd8, 0xff, 0xe0, 0x50, 0x51, 0x41, 0xff, 0xd9))
+  $photo = Join-Path $BackendDir "public\assets\seed\phones\phone-01.jpg"
+  if (-not (Test-Path $photo)) {
+    throw "QA photo is missing. Run scripts/download-seed-images.ps1 first."
+  }
 
   Write-Line "Health"
   Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl/health" -TimeoutSec 10 | Out-Null
@@ -191,13 +200,35 @@ function Invoke-ApiE2E {
   if (-not $listing.id) {
     throw "Listing creation response missing id"
   }
+  if ($listing.status -ne "pending") {
+    throw "New listing must be pending, received status=$($listing.status)"
+  }
+
+  Write-Line "Verify pending listing is not public"
+  try {
+    Invoke-RestMethod -Method Get -Uri "$BaseUrl/listings/$($listing.id)" | Out-Null
+    throw "Pending listing was publicly accessible before admin approval"
+  } catch {
+    if ($_.Exception.Response.StatusCode.value__ -ne 404) {
+      throw
+    }
+  }
 
   Write-Line "Admin login and approve listing"
   $admin = Invoke-RestMethod -Method Post -Uri "$BaseUrl/admin/auth/login" -ContentType "application/json" -Body (@{ email = $adminEmail; password = $adminPassword } | ConvertTo-Json)
   if (-not $admin.accessToken) {
     throw "Admin login response missing accessToken"
   }
-  Invoke-RestMethod -Method Post -Uri "$BaseUrl/admin/listings/$($listing.id)/approve" -Headers @{ Authorization = "Bearer $($admin.accessToken)" } | Out-Null
+  $approved = Invoke-RestMethod -Method Post -Uri "$BaseUrl/admin/listings/$($listing.id)/approve" -Headers @{ Authorization = "Bearer $($admin.accessToken)" }
+  if ($approved.status -ne "active") {
+    throw "Admin approval did not activate listing"
+  }
+
+  Write-Line "Verify approved listing is public"
+  $publicListing = Invoke-RestMethod -Method Get -Uri "$BaseUrl/listings/$($listing.id)"
+  if ($publicListing.status -ne "active") {
+    throw "Approved listing is not public and active"
+  }
 
   Write-Line "Search listings"
   $search = Invoke-RestMethod -Method Get -Uri "$BaseUrl/listings?brand=Apple&model=iPhone&sort=relevant"
@@ -274,6 +305,7 @@ try {
   }
 
   Invoke-Step "Backend dependencies" { Ensure-NodeModules $BackendDir }
+  Invoke-Step "Download unique seed images" { & (Join-Path $PSScriptRoot "download-seed-images.ps1") }
   Invoke-Step "Backend Prisma generate" { Invoke-External "npm run prisma:generate" $BackendDir }
   Invoke-Step "Backend tests" { Invoke-External "npm test" $BackendDir }
   Invoke-Step "Backend build" { Invoke-External "npm run build" $BackendDir }

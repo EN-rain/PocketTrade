@@ -10,13 +10,17 @@ class ListingImage {
 }
 
 class ListingSeller {
-  ListingSeller({required this.id, this.displayName});
+  ListingSeller({required this.id, this.displayName, this.profileImage, this.location});
   final String id;
   final String? displayName;
+  final String? profileImage;
+  final String? location;
 
   factory ListingSeller.fromJson(Map<String, dynamic> json) => ListingSeller(
         id: json['id']?.toString() ?? '',
         displayName: json['displayName'] as String?,
+        profileImage: json['profileImage'] as String?,
+        location: json['location'] as String?,
       );
 }
 

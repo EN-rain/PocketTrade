@@ -222,6 +222,15 @@ export class AuthService {
     if (!user || user.accountStatus !== 'active') {
       throw new UnauthorizedException('User not found or inactive');
     }
+
+    await this.prisma.revokedRefreshToken.create({
+      data: {
+        userId: payload.sub,
+        tokenHash: this.hashToken(refreshToken),
+        expiresAt: payload.exp ? new Date(payload.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60_000),
+      },
+    });
+
     return this.issueTokens(user.id, user.email, user.role);
   }
 

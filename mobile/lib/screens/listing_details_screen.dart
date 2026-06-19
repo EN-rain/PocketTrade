@@ -29,7 +29,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool _loading = true;
   bool _actioning = false;
 
-  static final _money = NumberFormat.simpleCurrency(decimalDigits: 0);
+  static final _money = NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 0);
 
   @override
   void initState() {
@@ -122,6 +122,32 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 const Text('Description', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(l.description),
+                if (l.seller != null) ...[
+                  const Divider(height: 32),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: (l.seller!.profileImage?.isNotEmpty ?? false)
+                            ? CachedNetworkImageProvider(l.seller!.profileImage!)
+                            : null,
+                        child: (l.seller!.profileImage?.isNotEmpty ?? false)
+                            ? null
+                            : const Icon(Icons.person),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l.seller!.displayName ?? 'Seller', style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if (l.seller!.location?.isNotEmpty ?? false)
+                              Text(l.seller!.location!, style: const TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Row(
                   children: [
