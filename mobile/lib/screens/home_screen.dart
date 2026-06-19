@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadPage(int page, {bool replace = false}) async {
     setState(() => _loadingMore = true);
     try {
-      final res = await _api.listListings(page: page);
+      final res = await _api.listListings(page: page, limit: 12);
       final items = (res['items'] as List<dynamic>? ?? const [])
           .map((e) => Listing.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();

@@ -141,7 +141,7 @@ export class ListingsService {
     const skip = ((query.page ?? 1) - 1) * (query.limit ?? 20);
     const take = query.limit ?? 20;
     const [items, total] = await Promise.all([
-      this.prisma.listing.findMany({ where, orderBy, skip, take, include: this.includeListing().include }),
+      this.prisma.listing.findMany({ where, orderBy, skip, take, include: this.includeListingSummary().include }),
       this.prisma.listing.count({ where }),
     ]);
     if (query.q) {
@@ -156,6 +156,15 @@ export class ListingsService {
     return {
       include: {
         images: { orderBy: { displayOrder: 'asc' as const } },
+        seller: { select: { id: true, displayName: true, profileImage: true, location: true } },
+      },
+    };
+  }
+
+  private includeListingSummary() {
+    return {
+      include: {
+        images: { orderBy: { displayOrder: 'asc' as const }, take: 1 },
         seller: { select: { id: true, displayName: true, profileImage: true, location: true } },
       },
     };
