@@ -1,45 +1,107 @@
-# Admin Panel
+# PocketTrade Admin
 
-React + TypeScript + Vite admin dashboard for the PocketTrade.
+React and TypeScript admin panel for PocketTrade.
 
-## Local Development
+## Stack
+
+- React
+- TypeScript
+- Vite
+- React Router
+- Axios
+- Tailwind CSS
+- Recharts
+
+## Requirements
+
+- Node.js
+- npm
+- Running PocketTrade backend
+
+## Setup
 
 ```bash
 npm install
-npm run dev
 ```
 
-Runs on http://localhost:5173.
-
-## Environment Variables
-
-Create a `.env` file (copy from `.env.example`):
+Copy the environment example:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable     | Description                | Default                               |
-|--------------|----------------------------|---------------------------------------|
-| VITE_API_URL | Base URL of the backend API | `http://localhost:3000` |
+Windows Command Prompt:
 
-> In production, `VITE_API_URL` can be set at build time or fall back to the baked-in default in `src/lib/api.ts`.
+```cmd
+copy .env.example .env
+```
 
-## Build
+Set the backend URL:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+Run locally:
 
 ```bash
+npm run dev
+```
+
+Default URL:
+
+```text
+http://localhost:5173
+```
+
+## Authentication
+
+The login page calls:
+
+```text
+POST /admin/auth/login
+```
+
+Administrator credentials are created by the backend seed using `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`. No default password is stored in this project documentation.
+
+## Pages
+
+- Dashboard
+- Listings
+- Users
+- Reports
+- Search analytics
+- Activity logs
+
+## API client
+
+The shared Axios client is located at:
+
+```text
+src/lib/api.ts
+```
+
+Protected routes are handled by:
+
+```text
+src/components/ProtectedRoute.tsx
+```
+
+## Checks
+
+```bash
+npm run lint
 npm run build
 ```
 
-Outputs static files to `dist/` which can be deployed to Vercel (auto-detects Vite).
+Build output:
 
-## Features
+```text
+dist/
+```
 
-- **Login** — authenticates against `/admin/auth/login` and stores the access token in localStorage.
-- **Dashboard** — metrics cards + bar/pie charts (recharts) showing listing status breakdown + recent activity feed.
-- **Listings** — paginated table with status/brand filters, approve/reject actions.
-- **Users** — paginated table with account status filter, suspend/restore actions.
+## Deployment
 
-## Admin Credentials
+Deploy `dist/` to a static host or connect the project to Vercel. Set `VITE_API_URL` during the production build.
 
-Try `admin@example.com` / `admin123`. If that fails, check the backend seed configuration for the actual `ADMIN_BOOTSTRAP_PASSWORD`.
+The backend must allow the deployed admin origin through `CORS_ORIGINS`.

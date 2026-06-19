@@ -1,48 +1,90 @@
 # PocketTrade
 
-PocketTrade is a used-phone PocketTrade with a NestJS backend, React admin panel, and Flutter Android app.
+Used-phone marketplace with a Flutter Android app, NestJS API, and React admin panel.
+
+## Structure
+
+```text
+backend/   NestJS API, Prisma schema, migrations, seed data, Jest tests
+admin/     React and TypeScript admin panel
+mobile/    Flutter Android client
+scripts/   QA and API test scripts
+docs/      Supporting notes and test output
+```
 
 ## Stack
 
-- Backend: NestJS, Prisma, PostgreSQL, JWT, Resend email OTP, Cloudinary, Socket.IO, Firebase Admin for FCM.
-- Admin: React 19, Vite, TypeScript, Tailwind, Recharts.
-- Mobile: Flutter, GoRouter, Dio, secure token storage.
+- NestJS, TypeScript, Prisma, PostgreSQL
+- Email OTP, JWT access and refresh tokens
+- Cloudinary, Socket.IO, Firebase Cloud Messaging
+- React, Vite, Tailwind CSS, Recharts
+- Flutter, Dio, GoRouter, secure storage
+- Jest and PowerShell API tests
 
-## Local Setup
+## Requirements
 
-### One-click QA
+- Node.js and npm
+- PostgreSQL
+- Flutter SDK and Android SDK
+- Cloudinary account
+- Resend account for production email OTP
+- Firebase project for push notifications
 
-Run the automated QA suite from Windows:
+## Backend setup
 
-```powershell
-.\RUN_QA.bat
-```
-
-It runs backend tests/build, admin build, Flutter dependency/analyze/APK build, and a local API smoke/e2e flow when the backend can be started or reached at `http://localhost:3000`. Logs are written to `qa-results/`.
-
-Useful options:
-
-```powershell
-.\RUN_QA.bat -SkipApiE2E
-.\RUN_QA.bat -SkipApk
-.\RUN_QA.bat -BaseUrl http://localhost:3000
-```
+Copy `.env.example` to `backend/.env` and fill in the database, JWT, Cloudinary, admin, Resend, Firebase, and CORS values.
 
 ```bash
 cd backend
 npm install
-cp ../.env.example .env
+npx prisma generate
 npx prisma migrate deploy
 npm run seed
 npm run start:dev
 ```
 
+Default API URL:
+
+```text
+http://localhost:3000
+```
+
+Swagger UI:
+
+```text
+http://localhost:3000/api-docs
+```
+
+The development seed creates one administrator, one buyer, 20 sellers, 20 listings, favorites, and sample conversations.
+
+Development buyer email:
+
+```text
+buyer@pockettrade.local
+```
+
+In development, the OTP response includes `devCode`. Production sends the code through Resend.
+
+## Admin setup
+
 ```bash
 cd admin
 npm install
-echo VITE_API_URL=http://localhost:3000 > .env
+```
+
+Create `admin/.env` with:
+
+```text
+VITE_API_URL=http://localhost:3000
+```
+
+Run:
+
+```bash
 npm run dev
 ```
+
+## Mobile setup
 
 ```bash
 cd mobile
@@ -50,39 +92,79 @@ flutter pub get
 flutter run --dart-define=API_URL=http://10.0.2.2:3000
 ```
 
-## Backend Environment
+Use `10.0.2.2` from an Android emulator. For a physical device, use the computer's local network IP address.
 
-Required:
+Place the Firebase Android configuration file at:
 
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `CLOUDINARY_URL` or `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`
-- `ADMIN_BOOTSTRAP_EMAIL`
-- `ADMIN_BOOTSTRAP_PASSWORD`
-
-Feature providers:
-
-- `RESEND_API_KEY`
-- `OTP_FROM_EMAIL`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
-
-## API Highlights
-
-- Auth: `POST /auth/request-otp`, `POST /auth/verify-otp`, `POST /auth/refresh`, `POST /auth/logout`
-- Users: `GET /users/me`, `PATCH /users/me`, `POST /users/me/delete-request`
-- Listings: public search/detail, authenticated multi-photo create, seller lifecycle actions.
-- PocketTrade: favorites, conversations/messages, blocks, reports, push tokens.
-- Admin: dashboard, listings, users, reports, search analytics, activity log.
-- Docs: Swagger UI at `/api-docs`.
-
-## Verification
-
-```bash
-cd backend && npm test && npm run build
-cd admin && npm run build
-cd mobile && flutter analyze && flutter build apk --debug
+```text
+mobile/android/app/google-services.json
 ```
 
-Flutter commands require the Flutter SDK on PATH.
+## Main API routes
+
+```text
+POST /auth/request-otp
+POST /auth/verify-otp
+POST /auth/refresh
+POST /auth/logout
+
+GET    /listings
+GET    /listings/:id
+POST   /listings
+GET    /listings/mine
+PATCH  /listings/:id
+DELETE /listings/:id
+POST   /listings/:id/mark-sold
+POST   /listings/:id/republish
+```
+
+Other modules:
+
+```text
+/favorites
+/conversations
+/blocks
+/reports
+/push-tokens
+/admin
+```
+
+## Tests and builds
+
+```bash
+cd backend
+npm test
+npm run build
+```
+
+```bash
+cd admin
+npm run build
+npm run lint
+```
+
+```bash
+cd mobile
+flutter analyze
+flutter build apk --debug
+```
+
+Windows QA script:
+
+```powershell
+.\RUN_QA.bat
+```
+
+Options:
+
+```powershell
+.\RUN_QA.bat -SkipApiE2E
+.\RUN_QA.bat -SkipApk
+.\RUN_QA.bat -BaseUrl http://localhost:3000
+```
+
+QA logs are written to `qa-results/`.
+
+## Deployment
+
+See [`DEPLOY.md`](DEPLOY.md). Do not commit environment files or service credentials.

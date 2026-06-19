@@ -1,28 +1,96 @@
-# Admin Guide
+# PocketTrade Admin
 
-The admin panel is a Vite React app. Set `VITE_API_URL` to the backend URL and log in at `/login`.
+The admin panel is a React and TypeScript application under `admin/`. It uses the NestJS API under `/admin`.
 
-## Bootstrap Account
+## Setup
 
-`backend/prisma/seed.ts` creates or updates an admin user using:
+```bash
+cd admin
+npm install
+```
 
-- `ADMIN_BOOTSTRAP_EMAIL`
-- `ADMIN_BOOTSTRAP_PASSWORD`
+Create `admin/.env`:
 
-Passwords are stored as bcrypt hashes. If the password is missing, a generated one is printed during seed.
+```env
+VITE_API_URL=http://localhost:3000
+```
 
-## Admin Capabilities
+Run locally:
 
-- Dashboard metrics and recent activity.
-- Listing moderation: list, approve, reject, edit, remove, restore.
-- User management: list, inspect, suspend with reason, restore.
-- Reports: review reported listings/users/conversations and resolve or dismiss.
-- Search analytics: top terms and zero-result searches.
-- Activity log: paginated moderation actions.
+```bash
+npm run dev
+```
 
-## Security Checklist
+Default local URL:
 
-- Use a unique `JWT_SECRET` per environment.
-- Store admin password in a password manager.
-- Keep `.env` files out of git.
-- Rotate any secret that was ever committed or pasted into shared logs.
+```text
+http://localhost:5173
+```
+
+## Administrator account
+
+The backend seed creates or updates the administrator using:
+
+```env
+ADMIN_BOOTSTRAP_EMAIL=
+ADMIN_BOOTSTRAP_PASSWORD=
+```
+
+Run the seed after setting those values:
+
+```bash
+cd backend
+npm run seed
+```
+
+Passwords are stored as bcrypt hashes. Do not place administrator credentials in documentation or source code.
+
+## Modules
+
+- Dashboard metrics and recent activity
+- Listing approval, rejection, editing, removal, and restoration
+- User inspection, suspension, and restoration
+- Report review and status updates
+- Search analytics
+- Administrative activity logs
+
+## API routes
+
+```text
+POST /admin/auth/login
+GET  /admin/dashboard
+GET  /admin/listings
+GET  /admin/listings/:id
+PATCH /admin/listings/:id
+POST /admin/listings/:id/approve
+POST /admin/listings/:id/reject
+POST /admin/listings/:id/remove
+POST /admin/listings/:id/restore
+GET  /admin/users
+GET  /admin/users/:id
+GET  /admin/users/:id/listings
+POST /admin/users/:id/suspend
+POST /admin/users/:id/restore
+GET  /admin/analytics/search
+GET  /admin/reports
+POST /admin/reports/:id/resolve
+POST /admin/reports/:id/dismiss
+GET  /admin/activity
+```
+
+## Build
+
+```bash
+npm run lint
+npm run build
+```
+
+Static output is written to `admin/dist/`.
+
+## Security
+
+- Use a separate administrator password for each environment.
+- Keep the JWT secret and admin password outside Git.
+- Restrict backend CORS to the deployed admin origin.
+- Suspend or rotate compromised administrator accounts and credentials.
+- Review activity logs after moderation changes.

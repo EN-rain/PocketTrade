@@ -52,7 +52,9 @@ function Invoke-Step($Name, [scriptblock]$Action) {
   $sw = [Diagnostics.Stopwatch]::StartNew()
   Write-Line ""
   Write-Line "==> $Name"
+  $previousErrorActionPreference = $ErrorActionPreference
   try {
+    $ErrorActionPreference = "Continue"
     & $Action *>&1 | Tee-Object -FilePath $log -Append
     $sw.Stop()
     Add-Result $Name "PASS" $sw.Elapsed.TotalSeconds $log
@@ -63,6 +65,8 @@ function Invoke-Step($Name, [scriptblock]$Action) {
     $message | Tee-Object -FilePath $log -Append | Out-Host
     Add-Result $Name "FAIL" $sw.Elapsed.TotalSeconds $log $message
     Write-Line "FAIL: $Name"
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
   }
 }
 
@@ -190,23 +194,34 @@ function Invoke-ApiE2E {
     throw "Search response was empty"
   }
 
+  Write-Line "Create buyer account"
+  $buyerEmail = "qa-buyer-{0}@example.com" -f ([guid]::NewGuid().ToString("N").Substring(0, 10))
+  $buyerOtp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/request-otp" -ContentType "application/json" -Body (@{ email = $buyerEmail } | ConvertTo-Json)
+  if (-not $buyerOtp.devCode) {
+    throw "Buyer OTP response did not include devCode"
+  }
+  $buyerAuth = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/verify-otp" -ContentType "application/json" -Body (@{ email = $buyerEmail; code = $buyerOtp.devCode } | ConvertTo-Json)
+  if (-not $buyerAuth.accessToken -or -not $buyerAuth.refreshToken) {
+    throw "Buyer auth response missing accessToken or refreshToken"
+  }
+
   Write-Line "Favorite listing"
-  Invoke-RestMethod -Method Post -Uri "$BaseUrl/favorites" -Headers @{ Authorization = "Bearer $($auth.accessToken)" } -ContentType "application/json" -Body (@{ listingId = [int]$listing.id } | ConvertTo-Json) | Out-Null
+  Invoke-RestMethod -Method Post -Uri "$BaseUrl/favorites" -Headers @{ Authorization = "Bearer $($buyerAuth.accessToken)" } -ContentType "application/json" -Body (@{ listingId = [int]$listing.id } | ConvertTo-Json) | Out-Null
 
   Write-Line "Create conversation"
-  $conversation = Invoke-RestMethod -Method Post -Uri "$BaseUrl/conversations" -Headers @{ Authorization = "Bearer $($auth.accessToken)" } -ContentType "application/json" -Body (@{ listingId = [int]$listing.id } | ConvertTo-Json)
+  $conversation = Invoke-RestMethod -Method Post -Uri "$BaseUrl/conversations" -Headers @{ Authorization = "Bearer $($buyerAuth.accessToken)" } -ContentType "application/json" -Body (@{ listingId = [int]$listing.id } | ConvertTo-Json)
   if (-not $conversation.id) {
     throw "Conversation response missing id"
   }
 
   Write-Line "Send message"
-  $message = Invoke-RestMethod -Method Post -Uri "$BaseUrl/conversations/$($conversation.id)/messages" -Headers @{ Authorization = "Bearer $($auth.accessToken)" } -ContentType "application/json" -Body (@{ content = "Automated QA message" } | ConvertTo-Json)
+  $message = Invoke-RestMethod -Method Post -Uri "$BaseUrl/conversations/$($conversation.id)/messages" -Headers @{ Authorization = "Bearer $($buyerAuth.accessToken)" } -ContentType "application/json" -Body (@{ content = "Automated QA message" } | ConvertTo-Json)
   if (-not $message.id) {
     throw "Message response missing id"
   }
 
   Write-Line "Report listing/conversation"
-  Invoke-RestMethod -Method Post -Uri "$BaseUrl/reports" -Headers @{ Authorization = "Bearer $($auth.accessToken)" } -ContentType "application/json" -Body (@{
+  Invoke-RestMethod -Method Post -Uri "$BaseUrl/reports" -Headers @{ Authorization = "Bearer $($buyerAuth.accessToken)" } -ContentType "application/json" -Body (@{
       reportedListingId = [int]$listing.id
       conversationId = [int]$conversation.id
       reason = "scam"
@@ -214,6 +229,7 @@ function Invoke-ApiE2E {
     } | ConvertTo-Json) | Out-Null
 
   Write-Line "Logout"
+  Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/logout" -Headers @{ Authorization = "Bearer $($buyerAuth.accessToken)" } -ContentType "application/json" -Body (@{ refreshToken = $buyerAuth.refreshToken } | ConvertTo-Json) | Out-Null
   Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/logout" -Headers @{ Authorization = "Bearer $($auth.accessToken)" } -ContentType "application/json" -Body (@{ refreshToken = $auth.refreshToken } | ConvertTo-Json) | Out-Null
 
   Write-Line "API E2E passed: listing=$($listing.id) conversation=$($conversation.id)"

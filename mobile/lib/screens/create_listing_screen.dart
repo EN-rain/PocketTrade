@@ -166,11 +166,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _priceCtrl,
-                      decoration: const InputDecoration(labelText: 'Price (USD)', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Price (₱)', border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
                       validator: (v) {
-                        final n = double.tryParse(v ?? '');
-                        if (n == null || n < 0) return 'Enter a valid price';
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n < 1) return 'Enter a whole-number price above zero';
                         return null;
                       },
                     ),

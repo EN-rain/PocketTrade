@@ -114,7 +114,7 @@ The administrator has full access to:
 2. System sends a one-time password by email.
 3. User enters the OTP.
 4. Backend verifies the code.
-5. A new account is created automatically when the number is not registered.
+5. A new account is created automatically when the email address is not registered.
 6. Returning users are signed in.
 
 ### Security controls
@@ -476,7 +476,7 @@ Main database entities:
 ### Users
 
 * User ID
-* Mobile number
+* Email address
 * Display name
 * Profile image
 * Location
@@ -486,7 +486,7 @@ Main database entities:
 
 ### OTP Requests
 
-* Mobile number
+* Email address
 * Hashed OTP
 * Expiration date
 * Number of attempts
@@ -898,7 +898,6 @@ The following should be treated as future enhancements unless separately include
 * AI-based price recommendations
 * iOS application
 * Multi-language support
-* Phone-number login
 * Voice or video calling
 
 ---
