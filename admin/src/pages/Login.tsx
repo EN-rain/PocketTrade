@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
+import pocketTradeBackground from '../assets/pockettrade-background.png';
 
 interface LoginResponse {
   accessToken: string;
@@ -44,8 +45,11 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 md:p-8">
+    <div
+      className="min-h-screen flex items-center justify-center bg-slate-950 bg-cover bg-center px-4"
+      style={{ backgroundImage: `url(${pocketTradeBackground})` }}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-white/30 bg-white/95 p-6 shadow-2xl backdrop-blur md:p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">Admin Login</h1>
         {error && (
           <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">

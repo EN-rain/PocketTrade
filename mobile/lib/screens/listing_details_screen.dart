@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../api/api_client.dart';
 import '../models/listing.dart';
 import '../storage/secure_storage.dart';
+import '../widgets/cached_app_image.dart';
 
 class ListingDetailsScreen extends StatefulWidget {
   const ListingDetailsScreen({
@@ -23,13 +23,15 @@ class ListingDetailsScreen extends StatefulWidget {
 }
 
 class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
-  late final ApiClient _api = ApiClient(baseUrl: widget.apiUrl, tokenStore: widget.tokenStore);
+  late final ApiClient _api =
+      ApiClient(baseUrl: widget.apiUrl, tokenStore: widget.tokenStore);
   Listing? _listing;
   String? _error;
   bool _loading = true;
   bool _actioning = false;
 
-  static final _money = NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 0);
+  static final _money =
+      NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 0);
 
   @override
   void initState() {
@@ -61,7 +63,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
+              ? Center(
+                  child: Padding(
+                      padding: const EdgeInsets.all(24), child: Text(_error!)))
               : _listing == null
                   ? const Center(child: Text('Listing not found'))
                   : _buildBody(_listing!),
@@ -78,14 +82,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               height: 280,
               child: PageView.builder(
                 itemCount: l.images.length,
-                itemBuilder: (context, i) => CachedNetworkImage(
+                itemBuilder: (context, i) => CachedAppImage(
                   imageUrl: l.images[i].url,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(color: Colors.grey.shade200),
-                  errorWidget: (_, __, ___) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image),
-                  ),
+                  height: 280,
+                  memCacheWidth: 900,
+                  maxDiskCacheWidth: 1400,
                 ),
               ),
             )
@@ -93,14 +95,16 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             Container(
               height: 280,
               color: Colors.grey.shade200,
-              child: const Icon(Icons.phone_iphone, size: 80, color: Colors.grey),
+              child:
+                  const Icon(Icons.phone_iphone, size: 80, color: Colors.grey),
             ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${l.brand} ${l.model}', style: Theme.of(context).textTheme.headlineSmall),
+                Text('${l.brand} ${l.model}',
+                    style: Theme.of(context).textTheme.headlineSmall),
                 if (l.status == 'sold') ...[
                   const SizedBox(height: 8),
                   const Chip(label: Text('Sold')),
@@ -119,7 +123,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 _spec('Location', l.location),
                 _spec('Posted', DateFormat.yMMMd().format(l.createdAt)),
                 const SizedBox(height: 16),
-                const Text('Description', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('Description',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(l.description),
                 if (l.seller != null) ...[
@@ -127,9 +132,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundImage: (l.seller!.profileImage?.isNotEmpty ?? false)
-                            ? CachedNetworkImageProvider(l.seller!.profileImage!)
-                            : null,
+                        backgroundImage:
+                            (l.seller!.profileImage?.isNotEmpty ?? false)
+                                ? PocketTradeImageCache.provider(
+                                    l.seller!.profileImage!)
+                                : null,
                         child: (l.seller!.profileImage?.isNotEmpty ?? false)
                             ? null
                             : const Icon(Icons.person),
@@ -139,9 +146,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l.seller!.displayName ?? 'Seller', style: const TextStyle(fontWeight: FontWeight.w700)),
+                            Text(l.seller!.displayName ?? 'Seller',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
                             if (l.seller!.location?.isNotEmpty ?? false)
-                              Text(l.seller!.location!, style: const TextStyle(color: Colors.grey)),
+                              Text(l.seller!.location!,
+                                  style: const TextStyle(color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -153,13 +163,16 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: _actioning ? null : () async {
-                          setState(() => _actioning = true);
-                          final conversation = await _api.startConversation(l.id);
-                          if (!mounted) return;
-                          setState(() => _actioning = false);
-                          context.push('/chat/${conversation['id']}');
-                        },
+                        onPressed: _actioning
+                            ? null
+                            : () async {
+                                setState(() => _actioning = true);
+                                final conversation =
+                                    await _api.startConversation(l.id);
+                                if (!mounted) return;
+                                setState(() => _actioning = false);
+                                context.push('/chat/${conversation['id']}');
+                              },
                         icon: const Icon(Icons.chat_bubble_outline),
                         label: const Text('Message Seller'),
                       ),
@@ -169,15 +182,26 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       tooltip: 'Save',
                       onPressed: () async {
                         await _api.addFavorite(l.id);
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved')));
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Saved')));
+                        }
                       },
                       icon: const Icon(Icons.favorite_outline),
                     ),
                     IconButton.filledTonal(
                       tooltip: 'Report',
                       onPressed: () async {
-                        await _api.report({'reportedListingId': int.parse(l.id), 'reason': 'scam', 'details': 'Reported from listing details'});
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted')));
+                        await _api.report({
+                          'reportedListingId': int.parse(l.id),
+                          'reason': 'scam',
+                          'details': 'Reported from listing details'
+                        });
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Report submitted')));
+                        }
                       },
                       icon: const Icon(Icons.flag_outlined),
                     ),
@@ -186,7 +210,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         tooltip: 'Block seller',
                         onPressed: () async {
                           await _api.blockUser(l.seller!.id);
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seller blocked')));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Seller blocked')));
+                          }
                         },
                         icon: const Icon(Icons.block),
                       ),
@@ -210,7 +238,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             width: 110,
             child: Text(label, style: const TextStyle(color: Colors.grey)),
           ),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Expanded(
+              child: Text(value,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );

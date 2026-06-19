@@ -129,16 +129,16 @@ export function Listings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Listings</h1>
-        <div className="flex gap-2">
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Listings</h1>
+        <div className="admin-toolbar">
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="admin-filter w-full sm:w-auto"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -154,7 +154,7 @@ export function Listings() {
               setBrandFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="admin-filter w-full sm:w-auto"
           >
             <option value="">All Brands</option>
             {brands.map((b) => (
@@ -169,18 +169,18 @@ export function Listings() {
       {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">{error}</div>}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className={loading || items.length > 0 ? 'overflow-x-auto' : 'hidden'}>
+          <table className="admin-table min-w-[1040px]">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th className="px-4 md:px-6 py-3">Thumbnail</th>
-                <th className="px-4 md:px-6 py-3">ID</th>
-                <th className="px-4 md:px-6 py-3">Brand</th>
-                <th className="px-4 md:px-6 py-3">Model</th>
-                <th className="px-4 md:px-6 py-3">Price</th>
-                <th className="px-4 md:px-6 py-3">Status</th>
-                <th className="px-4 md:px-6 py-3">Created</th>
-                <th className="px-4 md:px-6 py-3 text-right">Actions</th>
+                <th className="w-20">Thumbnail</th>
+                <th className="w-20">ID</th>
+                <th>Brand</th>
+                <th>Model</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -190,39 +190,33 @@ export function Listings() {
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 md:px-6 py-8 text-center text-gray-500">
-                    No listings found
-                  </td>
-                </tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 md:px-6 py-3">
+                    <td>
                       {item.images && item.images.length > 0 ? (
                         <img
                           src={item.images[0].imageUrl}
                           alt=""
-                          className="w-10 h-10 rounded object-cover"
+                          className="h-10 w-10 rounded object-cover"
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded bg-gray-200" />
+                        <div className="h-10 w-10 rounded bg-gray-200" />
                       )}
                     </td>
-                    <td className="px-4 md:px-6 py-3 font-mono text-xs text-gray-500">{item.id}</td>
-                    <td className="px-4 md:px-6 py-3 font-medium text-gray-900">{item.brand}</td>
-                    <td className="px-4 md:px-6 py-3 text-gray-600">{item.model}</td>
-                    <td className="px-4 md:px-6 py-3 text-gray-900">₱{Number(item.price).toLocaleString('en-PH')}</td>
-                    <td className="px-4 md:px-6 py-3">
+                    <td className="font-mono text-xs text-gray-500">{item.id}</td>
+                    <td className="font-medium text-gray-900">{item.brand}</td>
+                    <td className="max-w-[220px] truncate text-gray-600">{item.model}</td>
+                    <td className="text-gray-900">₱{Number(item.price).toLocaleString('en-PH')}</td>
+                    <td>
                       <StatusBadge status={item.status} />
                     </td>
-                    <td className="px-4 md:px-6 py-3 text-gray-500">
+                    <td className="text-gray-500">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 md:px-6 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
                         {item.status === 'pending' && (
                           <>
                             <button
@@ -267,9 +261,14 @@ export function Listings() {
             </tbody>
           </table>
         </div>
+        {!loading && items.length === 0 && (
+          <div className="border-t border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+            No listings found
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="px-4 md:px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+        <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500">
             Showing {items.length} of {total} listings
           </p>

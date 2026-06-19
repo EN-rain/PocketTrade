@@ -34,7 +34,27 @@
     @apply text-2xl font-semibold tracking-normal text-slate-950;
   }
 
+  .admin-page-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .admin-toolbar {
+    @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end;
+  }
+
   .admin-filter {
     @apply h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500;
+  }
+
+  .admin-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .admin-table th {
+    @apply whitespace-nowrap px-4 py-3;
+  }
+
+  .admin-table td {
+    @apply px-4 py-3 align-middle;
   }
 }

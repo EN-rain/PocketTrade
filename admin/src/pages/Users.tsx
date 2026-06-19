@@ -92,15 +92,15 @@ export function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Users</h1>
         <select
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="admin-filter w-full sm:w-auto"
         >
           <option value="">All Statuses</option>
           <option value="active">Active</option>
@@ -111,17 +111,17 @@ export function Users() {
       {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">{error}</div>}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className={loading || items.length > 0 ? 'overflow-x-auto' : 'hidden'}>
+          <table className="admin-table min-w-[920px]">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th className="px-4 md:px-6 py-3">ID</th>
-                <th className="px-4 md:px-6 py-3">Email</th>
-                <th className="px-4 md:px-6 py-3">Name</th>
-                <th className="px-4 md:px-6 py-3">Role</th>
-                <th className="px-4 md:px-6 py-3">Status</th>
-                <th className="px-4 md:px-6 py-3">Created</th>
-                <th className="px-4 md:px-6 py-3 text-right">Actions</th>
+                <th className="w-20">ID</th>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -131,31 +131,25 @@ export function Users() {
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 md:px-6 py-8 text-center text-gray-500">
-                    No users found
-                  </td>
-                </tr>
               ) : (
                 items.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 md:px-6 py-3 font-mono text-xs text-gray-500">{user.id}</td>
-                    <td className="px-4 md:px-6 py-3 text-gray-600">{user.email}</td>
-                    <td className="px-4 md:px-6 py-3 text-gray-600">{user.displayName || '-'}</td>
-                    <td className="px-4 md:px-6 py-3">
+                    <td className="font-mono text-xs text-gray-500">{user.id}</td>
+                    <td className="max-w-[280px] truncate text-gray-600">{user.email}</td>
+                    <td className="max-w-[220px] truncate text-gray-600">{user.displayName || '-'}</td>
+                    <td>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-4 md:px-6 py-3">
+                    <td>
                       <StatusBadge status={user.accountStatus} />
                     </td>
-                    <td className="px-4 md:px-6 py-3 text-gray-500">
+                    <td className="text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 md:px-6 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
                         {user.accountStatus === 'active' ? (
                           <button
                             onClick={() => {
@@ -184,9 +178,14 @@ export function Users() {
             </tbody>
           </table>
         </div>
+        {!loading && items.length === 0 && (
+          <div className="border-t border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+            No users found
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="px-4 md:px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+        <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500">
             Showing {items.length} of {total} users
           </p>

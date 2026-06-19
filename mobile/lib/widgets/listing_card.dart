@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/listing.dart';
+import 'cached_app_image.dart';
 
 class ListingCard extends StatelessWidget {
   const ListingCard({super.key, required this.listing, this.onTap});
@@ -10,7 +10,8 @@ class ListingCard extends StatelessWidget {
   final Listing listing;
   final VoidCallback? onTap;
 
-  static final _money = NumberFormat.currency(locale: 'en_US', symbol: 'PHP ', decimalDigits: 0);
+  static final _money =
+      NumberFormat.currency(locale: 'en_US', symbol: 'PHP ', decimalDigits: 0);
 
   @override
   Widget build(BuildContext context) {
@@ -24,19 +25,13 @@ class ListingCard extends StatelessWidget {
             AspectRatio(
               aspectRatio: 1,
               child: listing.primaryImageUrl != null
-                  ? CachedNetworkImage(
+                  ? CachedAppImage(
                       imageUrl: listing.primaryImageUrl!,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: Colors.grey.shade200),
-                      errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.broken_image, size: 32, color: Colors.grey),
-                      ),
+                      memCacheWidth: 420,
+                      maxDiskCacheWidth: 900,
                     )
-                  : Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.phone_iphone, size: 32, color: Colors.grey),
-                    ),
+                  : const ImageFallback(),
             ),
             Padding(
               padding: const EdgeInsets.all(8),
