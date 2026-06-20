@@ -29,6 +29,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   String? _brand;
   String _condition = 'good';
+  String? _openPicker;
   List<XFile> _photos = [];
   List<Brand> _brands = [];
   bool _loadingBrands = true;
@@ -93,6 +94,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_brand == null) {
+      setState(() => _error = 'Select a brand');
+      return;
+    }
     if (_photos.isEmpty) {
       setState(() => _error = 'Please select at least one photo');
       return;
@@ -169,26 +174,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _brand,
-                      menuMaxHeight: 280,
-                      borderRadius: BorderRadius.circular(8),
-                      decoration: const InputDecoration(
-                          labelText: 'Brand',
-                          prefixIcon: Icon(Icons.phone_iphone)),
-                      items: _brands
-                          .map((b) => DropdownMenuItem(
-                              value: b.name,
-                              child: SizedBox(
-                                  height: 48,
-                                  child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(b.name,
-                                          overflow: TextOverflow.ellipsis)))))
+                    _inlinePicker(
+                      id: 'brand',
+                      label: 'Brand',
+                      icon: Icons.phone_iphone,
+                      value: _brand,
+                      options: _brands
+                          .map((brand) => _Option(brand.name, brand.name))
                           .toList(),
-                      onChanged: (v) => setState(() => _brand = v),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Select a brand' : null,
+                      onSelected: (value) => setState(() => _brand = value),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -220,27 +214,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _condition,
-                            menuMaxHeight: 280,
-                            borderRadius: BorderRadius.circular(8),
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                                labelText: 'Condition',
-                                prefixIcon: Icon(Icons.verified_outlined)),
-                            items: _conditions
-                                .map((c) => DropdownMenuItem(
-                                    value: c.value,
-                                    child: SizedBox(
-                                        height: 48,
-                                        child: Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(c.label,
-                                                overflow:
-                                                    TextOverflow.ellipsis)))))
-                                .toList(),
-                            onChanged: (v) =>
-                                setState(() => _condition = v ?? 'good'),
+                          child: _inlinePicker(
+                            id: 'condition',
+                            label: 'Condition',
+                            icon: Icons.verified_outlined,
+                            value: _condition,
+                            options: _conditions,
+                            onSelected: (value) =>
+                                setState(() => _condition = value),
                           ),
                         ),
                       ],
@@ -325,6 +306,91 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _inlinePicker({
+    required String id,
+    required String label,
+    required IconData icon,
+    required String? value,
+    required List<_Option> options,
+    required ValueChanged<String> onSelected,
+  }) {
+    final expanded = _openPicker == id;
+    final valueLabel = options
+        .firstWhere((option) => option.value == value,
+            orElse: () => const _Option('', 'Select'))
+        .label;
+    final theme = Theme.of(context);
+
+    return Semantics(
+      button: true,
+      expanded: expanded,
+      label: '$label: $valueLabel',
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => setState(() => _openPicker = expanded ? null : id),
+                child: SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      Icon(icon, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label, style: theme.textTheme.labelSmall),
+                            const SizedBox(height: 2),
+                            Text(valueLabel,
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+              ),
+              if (expanded)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: options.map((option) {
+                      final selected = option.value == value;
+                      return ChoiceChip(
+                        label:
+                            Text(option.label, overflow: TextOverflow.ellipsis),
+                        selected: selected,
+                        onSelected: (_) {
+                          onSelected(option.value);
+                          setState(() => _openPicker = null);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

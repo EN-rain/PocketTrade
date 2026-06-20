@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.16+17
+
+- Make Home a discovery feed instead of a duplicate search screen.
+- Keep the one embedded Search filter button and change Sell selectors to inline expanding options.
+
 ## 1.0.15+16
 
 - Replace the automated QA listing image with a unique person-free product photo.

@@ -142,6 +142,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body =
           const Center(child: Text('No listings yet — be the first to sell!'));
     } else {
+      final featured = _items.take(6).toList();
+      final latest = _items.skip(featured.length).toList();
       body = RefreshIndicator(
         onRefresh: _loadFirst,
         child: CustomScrollView(
@@ -149,50 +151,88 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => context.go('/search'),
-                  child: Container(
-                    height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(14),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Discover your next phone',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    Text('Fresh listings selected from the marketplace.',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 14),
+                    FilledButton.tonalIcon(
+                      onPressed: () => context.go('/search'),
+                      icon: const Icon(Icons.search),
+                      label: const Text('Search all listings'),
                     ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search),
-                        SizedBox(width: 12),
-                        Text('Search brand, model, storage'),
-                      ],
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Text('Featured today',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 252,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  itemCount: featured.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) => SizedBox(
+                    width: 172,
+                    child: ListingCard(
+                      listing: featured[index],
+                      onTap: () =>
+                          context.push('/listing/${featured[index].id}'),
                     ),
                   ),
                 ),
               ),
             ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                child: Text('Latest listings',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+              ),
+            ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.7,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.68,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, i) {
-                    if (i >= _items.length) {
+                    if (i >= latest.length) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    final l = _items[i];
+                    final l = latest[i];
                     return ListingCard(
                       listing: l,
                       onTap: () => context.push('/listing/${l.id}'),
                     );
                   },
-                  childCount: _items.length + (_loadingMore ? 2 : 0),
+                  childCount: latest.length + (_loadingMore ? 2 : 0),
                 ),
               ),
             ),
@@ -202,12 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Browse phones'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFirst),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Home')),
       body: body,
     );
   }
