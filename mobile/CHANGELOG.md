@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.14+15
+
+- Replace seeded marketplace photos with distinct person-free phone product images.
+
 ## 1.0.13+14
 
 - Restore the Search filter button and filter drawer with compact dropdown menus.
