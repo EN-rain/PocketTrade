@@ -1,28 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class PocketTradeImageCache {
   PocketTradeImageCache._();
 
-  static final CacheManager manager = CacheManager(
-    Config(
-      'pockettrade_images_v2',
-      stalePeriod: const Duration(days: 14),
-      maxNrOfCacheObjects: 600,
-    ),
-  );
-
-  static String key(String url) =>
-      Uri.tryParse(url)?.replace(query: '').toString() ?? url;
-
   static ImageProvider provider(String url) {
     final normalizedUrl = url.trim();
-    return CachedNetworkImageProvider(
-      optimizedUrl(normalizedUrl),
-      cacheKey: key(normalizedUrl),
-      cacheManager: manager,
-    );
+    return NetworkImage(optimizedUrl(normalizedUrl));
   }
 
   static String optimizedUrl(
@@ -84,26 +67,26 @@ class CachedAppImage extends StatelessWidget {
       height: maxDiskCacheHeight ?? memCacheHeight,
     );
 
-    return CachedNetworkImage(
-      imageUrl: optimizedUrl,
-      cacheKey: PocketTradeImageCache.key(normalizedUrl),
-      cacheManager: PocketTradeImageCache.manager,
+    return Image.network(
+      optimizedUrl,
       fit: fit,
       width: width,
       height: height,
-      fadeInDuration: const Duration(milliseconds: 140),
-      fadeOutDuration: Duration.zero,
-      memCacheWidth: memCacheWidth,
-      memCacheHeight: memCacheHeight,
-      maxWidthDiskCache: maxDiskCacheWidth,
-      maxHeightDiskCache: maxDiskCacheHeight,
-      progressIndicatorBuilder: (_, __, progress) => ImageFallback(
-        icon: placeholderIcon,
-        width: width,
-        height: height,
-        progress: progress.progress,
-      ),
-      errorWidget: (_, __, ___) =>
+      cacheWidth: memCacheWidth ?? maxDiskCacheWidth,
+      cacheHeight: memCacheHeight ?? maxDiskCacheHeight,
+      loadingBuilder: (_, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        final total = loadingProgress.expectedTotalBytes;
+        return ImageFallback(
+          icon: placeholderIcon,
+          width: width,
+          height: height,
+          progress: total == null
+              ? null
+              : loadingProgress.cumulativeBytesLoaded / total,
+        );
+      },
+      errorBuilder: (_, __, ___) =>
           ImageFallback(icon: errorIcon, width: width, height: height),
     );
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.12+13
+
+- Replace the failing disk-image cache path with Flutter's native image loader.
+
 ## 1.0.11+12
 
 - Remove search filters and the funnel control.
