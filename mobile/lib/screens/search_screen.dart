@@ -120,6 +120,19 @@ class _SearchScreenState extends State<SearchScreen> {
     _search(reset: true);
   }
 
+  Future<void> _openFilters() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.86,
+          child: _filterDrawer(sheetContext),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -140,7 +153,6 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      endDrawer: Drawer(child: SafeArea(child: _filterDrawer(context))),
       appBar: AppBar(title: const Text('Search')),
       body: RefreshIndicator(
         onRefresh: () => _search(reset: true),
@@ -219,12 +231,10 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Expanded(child: _queryField()),
             const SizedBox(width: 8),
-            Builder(
-              builder: (context) => IconButton.filledTonal(
-                tooltip: 'Filters',
-                onPressed: () => Scaffold.of(context).openEndDrawer(),
-                icon: const Icon(Icons.tune),
-              ),
+            IconButton.filledTonal(
+              tooltip: 'Filters',
+              onPressed: _openFilters,
+              icon: const Icon(Icons.tune),
             ),
           ],
         ),

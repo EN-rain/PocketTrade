@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.17+18
+
+- Remove the automatic duplicate Search drawer button; filters now open only from the icon beside the search input.
+
 ## 1.0.16+17
 
 - Make Home a discovery feed instead of a duplicate search screen.
