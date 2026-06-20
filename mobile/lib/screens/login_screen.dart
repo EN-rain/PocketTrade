@@ -52,15 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return true;
   }
 
-  String? _otpNotice(Map<String, dynamic> response) {
-    final message = response['message']?.toString();
-    final deliveryId = response['deliveryId']?.toString();
-    if (deliveryId != null && deliveryId.isNotEmpty) {
-      return 'Mailjet accepted: $deliveryId';
-    }
-    return message;
-  }
-
   void _setMode(_AuthMode mode) {
     setState(() {
       _mode = mode;
@@ -178,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         _otpSent = true;
-        _notice = _otpNotice(response);
+        _notice = response['message'] as String?;
       });
     } catch (e) {
       setState(() => _error = _authError(
@@ -223,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         _resetCodeSent = true;
-        _notice = _otpNotice(response);
+        _notice = response['message'] as String?;
         _passwordCtrl.clear();
       });
     } catch (e) {

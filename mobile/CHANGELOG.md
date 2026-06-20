@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8+9
+
+- Redesign the profile screen with grouped account and marketplace controls.
+- Package backend seed assets so listing and profile images load on Render.
+
+## 1.0.7+8
+
+- Remove Mailjet acceptance trace ids from OTP logs and user-facing notices.
+
 ## 1.0.6+7
 
 - Return and display Mailjet delivery trace ids for OTP requests.
