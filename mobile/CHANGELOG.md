@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5+6
+
+- Require Mailjet recipient message ids before reporting OTP email success.
+- Log Mailjet OTP acceptance receipts for delivery debugging.
+
 ## 1.0.4+5
 
 - Allow OTP resend after 1 minute.

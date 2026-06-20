@@ -29,6 +29,18 @@ type OtpIssue = {
   requestId?: number;
 };
 
+type MailjetRecipient = {
+  Email?: string;
+  MessageID?: number | string;
+  MessageUUID?: string;
+};
+
+type MailjetMessage = {
+  Status?: string;
+  To?: MailjetRecipient[];
+  Errors?: unknown;
+};
+
 type AuthResponse = {
   accessToken: string;
   refreshToken: string;
@@ -363,6 +375,15 @@ export class AuthService {
             To: [{ Email: email }],
             Subject: 'Your PocketTrade verification code',
             TextPart: `Your PocketTrade verification code is ${code}. It expires in 10 minutes.`,
+            HTMLPart: `
+              <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
+                <h2 style="margin-bottom:8px">PocketTrade verification code</h2>
+                <p>Use the code below to continue:</p>
+                <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:20px 0">${code}</p>
+                <p>This code expires in 10 minutes.</p>
+                <p>If you did not request this code, you can ignore this email.</p>
+              </div>
+            `,
           },
         ],
       }),
@@ -382,12 +403,24 @@ export class AuthService {
       throw new InternalServerErrorException('Failed to send verification email');
     }
 
-    const messages = (payload as { Messages?: Array<{ Status?: string; Errors?: unknown }> }).Messages;
-    const sent = Array.isArray(messages) && messages.every((message) => message.Status === 'success');
-    if (!sent) {
+    const messages = (payload as { Messages?: MailjetMessage[] }).Messages;
+    const accepted = Array.isArray(messages) && messages.length > 0 && messages.every((message) => {
+      const recipients = message.To ?? [];
+      return message.Status === 'success'
+        && recipients.length > 0
+        && recipients.every((recipient) => recipient.MessageID != null || recipient.MessageUUID != null);
+    });
+    if (!accepted) {
       this.logger.error(`Mailjet send was not accepted: ${body}`);
       throw new InternalServerErrorException('Failed to send verification email');
     }
+
+    const receipts = messages.flatMap((message) => message.To ?? []).map((recipient) => ({
+      email: recipient.Email,
+      messageId: recipient.MessageID,
+      messageUuid: recipient.MessageUUID,
+    }));
+    this.logger.log(`Mailjet accepted OTP email: ${JSON.stringify(receipts)}`);
   }
 
   private hashToken(token: string): string {
