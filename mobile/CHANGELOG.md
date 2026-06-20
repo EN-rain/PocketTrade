@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6+7
+
+- Return and display Mailjet delivery trace ids for OTP requests.
+- Update OTP helper text to 10 minutes.
+
 ## 1.0.5+6
 
 - Require Mailjet recipient message ids before reporting OTP email success.

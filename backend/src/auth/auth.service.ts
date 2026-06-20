@@ -21,6 +21,7 @@ type OtpResponse = {
   success: boolean;
   message: string;
   expiresAt: string;
+  deliveryId?: string;
 };
 
 type OtpIssue = {
@@ -39,6 +40,12 @@ type MailjetMessage = {
   Status?: string;
   To?: MailjetRecipient[];
   Errors?: unknown;
+};
+
+type MailjetReceipt = {
+  email?: string;
+  messageId?: number | string;
+  messageUuid?: string;
 };
 
 type AuthResponse = {
@@ -197,7 +204,13 @@ export class AuthService {
 
     if (issue.code != null && issue.requestId != null) {
       try {
-        await this.deliverOtp(email, issue.code);
+        const receipts = await this.deliverOtp(email, issue.code);
+        const receipt = receipts[0];
+        const deliveryId = receipt?.messageUuid ?? receipt?.messageId?.toString();
+        if (deliveryId != null) {
+          issue.response.deliveryId = deliveryId;
+          issue.response.message = `OTP accepted by Mailjet (${deliveryId})`;
+        }
       } catch (error) {
         // Do not leave an undelivered code active for the full validity window.
         await this.prisma.otpRequest.update({
@@ -352,7 +365,7 @@ export class AuthService {
     return email.split('@')[0]?.trim() || 'user';
   }
 
-  private async deliverOtp(email: string, code: string): Promise<void> {
+  private async deliverOtp(email: string, code: string): Promise<MailjetReceipt[]> {
     const apiKey = this.config.get<string>('MAILJET_API_KEY');
     const apiSecret = this.config.get<string>('MAILJET_API_SECRET');
     const fromEmail = this.config.get<string>('MAILJET_FROM_EMAIL');
@@ -421,6 +434,7 @@ export class AuthService {
       messageUuid: recipient.MessageUUID,
     }));
     this.logger.log(`Mailjet accepted OTP email: ${JSON.stringify(receipts)}`);
+    return receipts;
   }
 
   private hashToken(token: string): string {

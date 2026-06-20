@@ -52,6 +52,15 @@ class _LoginScreenState extends State<LoginScreen> {
     return true;
   }
 
+  String? _otpNotice(Map<String, dynamic> response) {
+    final message = response['message']?.toString();
+    final deliveryId = response['deliveryId']?.toString();
+    if (deliveryId != null && deliveryId.isNotEmpty) {
+      return 'Mailjet accepted: $deliveryId';
+    }
+    return message;
+  }
+
   void _setMode(_AuthMode mode) {
     setState(() {
       _mode = mode;
@@ -169,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         _otpSent = true;
-        _notice = response['message'] as String?;
+        _notice = _otpNotice(response);
       });
     } catch (e) {
       setState(() => _error = _authError(
@@ -214,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         _resetCodeSent = true;
-        _notice = response['message'] as String?;
+        _notice = _otpNotice(response);
         _passwordCtrl.clear();
       });
     } catch (e) {
@@ -430,7 +439,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (_mode == _AuthMode.signUp && _otpSent) ...[
             const SizedBox(height: 8),
             Text(
-              'Your code remains valid for 30 minutes.',
+              'Your code remains valid for 10 minutes.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
