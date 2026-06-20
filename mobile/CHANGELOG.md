@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3+4
+
+- Treat Mailjet per-message failures as OTP delivery failures.
+- Prevent failed Mailjet sends from creating a stuck active OTP.
+
 ## 1.0.2+3
 
 - Allow a fresh OTP request immediately when email delivery fails.

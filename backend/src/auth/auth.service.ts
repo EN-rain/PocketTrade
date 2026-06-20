@@ -358,10 +358,25 @@ export class AuthService {
         ],
       }),
     });
+    const body = await response.text();
 
     if (!response.ok) {
-      const body = await response.text();
       this.logger.error(`Mailjet send failed with HTTP ${response.status}: ${body}`);
+      throw new InternalServerErrorException('Failed to send verification email');
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(body) as unknown;
+    } catch {
+      this.logger.error(`Mailjet send returned invalid JSON: ${body}`);
+      throw new InternalServerErrorException('Failed to send verification email');
+    }
+
+    const messages = (payload as { Messages?: Array<{ Status?: string; Errors?: unknown }> }).Messages;
+    const sent = Array.isArray(messages) && messages.every((message) => message.Status === 'success');
+    if (!sent) {
+      this.logger.error(`Mailjet send was not accepted: ${body}`);
       throw new InternalServerErrorException('Failed to send verification email');
     }
   }
