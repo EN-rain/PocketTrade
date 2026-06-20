@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -22,7 +21,11 @@ type OtpResponse = {
   success: boolean;
   message: string;
   expiresAt: string;
-  devCode?: string;
+};
+
+type OtpIssue = {
+  response: OtpResponse;
+  code?: string;
 };
 
 type AuthResponse = {
@@ -35,6 +38,7 @@ type AuthResponse = {
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private static readonly otpTtlMs = 30 * 60_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -95,7 +99,7 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user?.passwordHash || user.accountStatus !== 'active' || !user.emailVerifiedAt) {
-      const expiresAt = new Date(Date.now() + 5 * 60_000);
+      const expiresAt = new Date(Date.now() + AuthService.otpTtlMs);
       return {
         success: true,
         message: 'If the email is registered, a reset code has been sent',
@@ -132,36 +136,45 @@ export class AuthService {
   }
 
   private async createOtp(email: string, message: string): Promise<OtpResponse> {
-    const latest = await this.prisma.otpRequest.findFirst({
-      where: { email, verified: false },
-      orderBy: { createdAt: 'desc' },
+    const issue = await this.prisma.$transaction(async (tx): Promise<OtpIssue> => {
+      // Serialize requests for one email so concurrent requests cannot double-send.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${email}))`;
+
+      const active = await tx.otpRequest.findFirst({
+        where: { email, verified: false, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (active) {
+        return {
+          response: {
+            success: true,
+            message: 'A verification code is already active for this email. Use that code before requesting another.',
+            expiresAt: active.expiresAt.toISOString(),
+          },
+        };
+      }
+
+      const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+      const hashedOtp = await bcrypt.hash(code, 10);
+      const expiresAt = new Date(Date.now() + AuthService.otpTtlMs);
+      await tx.otpRequest.create({
+        data: { email, hashedOtp, expiresAt, attempts: 0, verified: false },
+      });
+
+      return {
+        code,
+        response: {
+          success: true,
+          message,
+          expiresAt: expiresAt.toISOString(),
+        },
+      };
     });
-    if (latest && Date.now() - latest.createdAt.getTime() < 60_000) {
-      throw new BadRequestException('Please wait 60 seconds before requesting another code');
+
+    if (issue.code != null) {
+      await this.deliverOtp(email, issue.code);
     }
-
-    await this.prisma.otpRequest.updateMany({
-      where: { email, verified: false },
-      data: { verified: true },
-    });
-
-    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    const hashedOtp = await bcrypt.hash(code, 10);
-    const expiresAt = new Date(Date.now() + 5 * 60_000);
-
-    await this.prisma.otpRequest.create({
-      data: { email, hashedOtp, expiresAt, attempts: 0, verified: false },
-    });
-
-    await this.deliverOtp(email, code);
-
-    const isDev = process.env.NODE_ENV !== 'production';
-    return {
-      success: true,
-      message,
-      expiresAt: expiresAt.toISOString(),
-      ...(isDev ? { devCode: code } : {}),
-    };
+    return issue.response;
   }
 
   async verifyOtp(dto: VerifyOtpDto): Promise<AuthResponse> {
@@ -312,11 +325,6 @@ export class AuthService {
     const fromEmail = this.config.get<string>('MAILJET_FROM_EMAIL');
     const fromName = this.config.get<string>('MAILJET_FROM_NAME', 'PocketTrade');
 
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`[OTP] email=${email} code=${code}`);
-      return;
-    }
-
     if (!apiKey || !apiSecret || !fromEmail) {
       throw new InternalServerErrorException('Mailjet email delivery is not configured');
     }
@@ -333,7 +341,7 @@ export class AuthService {
             From: { Email: fromEmail, Name: fromName },
             To: [{ Email: email }],
             Subject: 'Your PocketTrade verification code',
-            TextPart: `Your PocketTrade verification code is ${code}. It expires in 5 minutes.`,
+            TextPart: `Your PocketTrade verification code is ${code}. It expires in 30 minutes.`,
           },
         ],
       }),

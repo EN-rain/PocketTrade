@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -33,7 +34,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _resetCodeSent = false;
   bool _loading = false;
   bool _rememberMe = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmation = true;
   String? _error;
+  String? _notice;
 
   String get _email => _emailCtrl.text.trim().toLowerCase();
   String get _password => _passwordCtrl.text;
@@ -54,9 +58,38 @@ class _LoginScreenState extends State<LoginScreen> {
       _otpSent = false;
       _resetCodeSent = false;
       _error = null;
+      _notice = null;
       _otpCtrl.clear();
       _confirmPasswordCtrl.clear();
+      _obscurePassword = true;
+      _obscureConfirmation = true;
     });
+  }
+
+  String _authError(Object error, String fallback) {
+    if (error is DioException) {
+      final status = error.response?.statusCode;
+      final data = error.response?.data;
+      final message = data is Map ? data['message'] : null;
+      if (status == 409) {
+        return 'An account already exists for this email. Sign in instead.';
+      }
+      if (status == 429) {
+        return 'Too many attempts. Please wait a minute.';
+      }
+      if (message is List && message.isNotEmpty) {
+        return message.first.toString();
+      }
+      if (message is String && message.isNotEmpty && status != 500) {
+        return message;
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return 'Cannot reach PocketTrade. Check your connection and try again.';
+      }
+    }
+    return fallback;
   }
 
   Future<void> _completeSignIn(Map<String, dynamic> res) async {
@@ -107,8 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _completeSignIn(await _api.login(_email, _password));
     } catch (e) {
-      setState(
-          () => _error = 'Could not sign in. Check your email and password.');
+      setState(() => _error = _authError(
+            e,
+            'Could not sign in. Check your email and password.',
+          ));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -130,15 +165,17 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if (!_loading) return;
     try {
-      await _api.register(_email, _password);
+      final response = await _api.register(_email, _password);
       if (!mounted) return;
       setState(() {
         _otpSent = true;
-        _otpCtrl.clear();
+        _notice = response['message'] as String?;
       });
     } catch (e) {
-      setState(() => _error =
-          'Could not create that account. The email may already be registered.');
+      setState(() => _error = _authError(
+            e,
+            'Could not create your account. Please try again.',
+          ));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -173,11 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
     });
     try {
-      await _api.forgotPassword(_email);
+      final response = await _api.forgotPassword(_email);
       if (!mounted) return;
       setState(() {
         _resetCodeSent = true;
-        _otpCtrl.clear();
+        _notice = response['message'] as String?;
         _passwordCtrl.clear();
       });
     } catch (e) {
@@ -231,63 +268,30 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title = switch (_mode) {
-      _AuthMode.signIn => 'Sign in to PocketTrade',
-      _AuthMode.signUp =>
-        _otpSent ? 'Verify your account' : 'Create your account',
-      _AuthMode.forgotPassword =>
-        _resetCodeSent ? 'Reset password' : 'Forgot password',
-    };
-    final subtitle = switch (_mode) {
-      _AuthMode.signIn => 'Buy and sell phones with verified accounts.',
-      _AuthMode.signUp => _otpSent
-          ? 'Enter the code sent after registration.'
-          : 'Your display name is created from your email.',
-      _AuthMode.forgotPassword => _resetCodeSent
-          ? 'Enter the reset code and a new password.'
-          : 'Send a reset code to your email.',
-    };
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.phone_android_rounded,
-                            color: theme.colorScheme.onPrimary, size: 34),
-                        const SizedBox(height: 18),
-                        Text(
-                          title,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          subtitle,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onPrimary
-                                  .withValues(alpha: 0.84)),
-                        ),
-                      ],
+                  Semantics(
+                    label: 'PocketTrade',
+                    image: true,
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/pockettrade_icon.png',
+                        width: 132,
+                        height: 132,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 40),
                   SegmentedButton<_AuthMode>(
                     segments: const [
                       ButtonSegment(
@@ -308,33 +312,75 @@ class _LoginScreenState extends State<LoginScreen> {
                         _loading ? null : (v) => _setMode(v.first),
                   ),
                   const SizedBox(height: 16),
-                  _formFields(),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.03),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
                       ),
-                      child: Text(_error!,
-                          style: TextStyle(
-                              color: theme.colorScheme.onErrorContainer)),
+                      child: Column(
+                        key: ValueKey('$_mode-$_otpSent-$_resetCodeSent'),
+                        children: [
+                          _formFields(),
+                          if (_notice != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              _notice!,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                          if (_error != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.errorContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _error!,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: _loading ? null : _primaryAction,
+                            icon: _loading
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(_buttonIcon),
+                            label: Text(_buttonText),
+                          ),
+                          const SizedBox(height: 6),
+                          _secondaryActions(),
+                        ],
+                      ),
                     ),
-                  ],
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _loading ? null : _primaryAction,
-                    icon: _loading
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(_buttonIcon),
-                    label: Text(_buttonText),
                   ),
-                  const SizedBox(height: 6),
-                  _secondaryActions(),
                 ],
               ),
             ),
@@ -364,6 +410,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           keyboardType: TextInputType.emailAddress,
           enabled: !_loading && !showOtp,
+          autofillHints: const [AutofillHints.email],
           textInputAction: TextInputAction.next,
         ),
         if (showOtp) ...[
@@ -380,16 +427,44 @@ class _LoginScreenState extends State<LoginScreen> {
               LengthLimitingTextInputFormatter(6),
             ],
           ),
+          if (_mode == _AuthMode.signUp && _otpSent) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Your code remains valid for 30 minutes.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ],
         if (showPassword) ...[
           const SizedBox(height: 12),
           TextField(
             controller: _passwordCtrl,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Password',
-              prefixIcon: Icon(Icons.lock_outline),
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                onPressed: _loading
+                    ? null
+                    : () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
             ),
-            obscureText: true,
+            obscureText: _obscurePassword,
+            enabled: !_loading,
+            enableSuggestions: false,
+            autocorrect: false,
+            autofillHints: _mode == _AuthMode.signIn
+                ? const [AutofillHints.password]
+                : const [AutofillHints.newPassword],
+            textInputAction:
+                showConfirm ? TextInputAction.next : TextInputAction.done,
           ),
         ],
         if (_mode == _AuthMode.signIn) ...[
@@ -408,11 +483,31 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _confirmPasswordCtrl,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Confirm password',
-              prefixIcon: Icon(Icons.verified_user_outlined),
+              prefixIcon: const Icon(Icons.verified_user_outlined),
+              suffixIcon: IconButton(
+                tooltip: _obscureConfirmation
+                    ? 'Show password confirmation'
+                    : 'Hide password confirmation',
+                onPressed: _loading
+                    ? null
+                    : () => setState(
+                          () => _obscureConfirmation = !_obscureConfirmation,
+                        ),
+                icon: Icon(
+                  _obscureConfirmation
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
             ),
-            obscureText: true,
+            obscureText: _obscureConfirmation,
+            enabled: !_loading,
+            enableSuggestions: false,
+            autocorrect: false,
+            autofillHints: const [AutofillHints.newPassword],
+            textInputAction: TextInputAction.done,
           ),
         ],
       ],
@@ -448,12 +543,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return TextButton(
         onPressed: _loading ? null : () => _setMode(_AuthMode.forgotPassword),
         child: const Text('Forgot password?'),
-      );
-    }
-    if (_mode == _AuthMode.signUp && _otpSent) {
-      return TextButton(
-        onPressed: _loading ? null : _register,
-        child: const Text('Send another code'),
       );
     }
     return TextButton(

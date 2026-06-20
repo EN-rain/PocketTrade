@@ -19,7 +19,7 @@ describe('AuthController', () => {
           useValue: {
             requestOtp: jest
               .fn()
-              .mockResolvedValue({ success: true, message: 'OTP sent', expiresAt: '2026-06-17T12:00:00.000Z', devCode: '123456' }),
+              .mockResolvedValue({ success: true, message: 'OTP sent', expiresAt: '2026-06-17T12:00:00.000Z' }),
           },
         },
       ],
@@ -31,6 +31,5 @@ describe('AuthController', () => {
   it('requestOtp returns success with dev code', async () => {
     const result = await controller.requestOtp({ email: 'user@test.com' });
     expect(result.success).toBe(true);
-    expect(result.devCode).toBe('123456');
   });
 });
