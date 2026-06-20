@@ -145,13 +145,6 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text('Search'),
         actions: [
-          Builder(
-            builder: (context) => IconButton(
-              tooltip: 'Filters',
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: const Icon(Icons.tune),
-            ),
-          ),
           IconButton(
             tooltip: 'Clear filters',
             onPressed: _loading ? null : _clearFilters,

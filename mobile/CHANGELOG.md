@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9+10
+
+- Show the other participant in message threads.
+- Remove the duplicate search filter button.
+- Refresh the image cache and improve slow-image placeholders.
+
 ## 1.0.8+9
 
 - Redesign the profile screen with grouped account and marketplace controls.

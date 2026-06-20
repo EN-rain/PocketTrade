@@ -7,8 +7,8 @@ class PocketTradeImageCache {
 
   static final CacheManager manager = CacheManager(
     Config(
-      'pockettrade_images_v1',
-      stalePeriod: const Duration(days: 30),
+      'pockettrade_images_v2',
+      stalePeriod: const Duration(days: 14),
       maxNrOfCacheObjects: 600,
     ),
   );
@@ -91,14 +91,18 @@ class CachedAppImage extends StatelessWidget {
       fit: fit,
       width: width,
       height: height,
-      fadeInDuration: Duration.zero,
+      fadeInDuration: const Duration(milliseconds: 140),
       fadeOutDuration: Duration.zero,
       memCacheWidth: memCacheWidth,
       memCacheHeight: memCacheHeight,
       maxWidthDiskCache: maxDiskCacheWidth,
       maxHeightDiskCache: maxDiskCacheHeight,
-      placeholder: (_, __) =>
-          ImageFallback(icon: placeholderIcon, width: width, height: height),
+      progressIndicatorBuilder: (_, __, progress) => ImageFallback(
+        icon: placeholderIcon,
+        width: width,
+        height: height,
+        progress: progress.progress,
+      ),
       errorWidget: (_, __, ___) =>
           ImageFallback(icon: errorIcon, width: width, height: height),
     );
@@ -111,20 +115,32 @@ class ImageFallback extends StatelessWidget {
     this.icon = Icons.phone_iphone,
     this.width,
     this.height,
+    this.progress,
   });
 
   final IconData icon;
   final double? width;
   final double? height;
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       width: width,
       height: height,
-      color: Colors.grey.shade200,
+      color: theme.colorScheme.surfaceContainerHighest,
       alignment: Alignment.center,
-      child: Icon(icon, size: 32, color: Colors.grey),
+      child: progress == null
+          ? Icon(icon, size: 32, color: theme.colorScheme.onSurfaceVariant)
+          : SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: progress == 0 ? null : progress,
+              ),
+            ),
     );
   }
 }
