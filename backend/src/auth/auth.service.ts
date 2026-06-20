@@ -26,6 +26,7 @@ type OtpResponse = {
 type OtpIssue = {
   response: OtpResponse;
   code?: string;
+  requestId?: number;
 };
 
 type AuthResponse = {
@@ -157,12 +158,14 @@ export class AuthService {
       const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
       const hashedOtp = await bcrypt.hash(code, 10);
       const expiresAt = new Date(Date.now() + AuthService.otpTtlMs);
-      await tx.otpRequest.create({
+      const request = await tx.otpRequest.create({
         data: { email, hashedOtp, expiresAt, attempts: 0, verified: false },
+        select: { id: true },
       });
 
       return {
         code,
+        requestId: request.id,
         response: {
           success: true,
           message,
@@ -171,8 +174,17 @@ export class AuthService {
       };
     });
 
-    if (issue.code != null) {
-      await this.deliverOtp(email, issue.code);
+    if (issue.code != null && issue.requestId != null) {
+      try {
+        await this.deliverOtp(email, issue.code);
+      } catch (error) {
+        // Do not leave an undelivered code active for the full validity window.
+        await this.prisma.otpRequest.update({
+          where: { id: issue.requestId },
+          data: { verified: true },
+        });
+        throw error;
+      }
     }
     return issue.response;
   }
