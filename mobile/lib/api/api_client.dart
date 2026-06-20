@@ -171,6 +171,22 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String, dynamic>> uploadProfileImage(String imagePath) async {
+    final formData = FormData.fromMap({
+      'photo': await MultipartFile.fromFile(imagePath),
+    });
+    final res = await _dio.post('/users/me/profile-image', data: formData);
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    await _dio.post('/users/me/change-password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
+
   Future<Map<String, dynamic>> listListings({
     String? brand,
     String? model,

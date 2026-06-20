@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.10+11
+
+- Add profile photo preview/upload, GPS location fill, and change password.
+- Remove the profile refresh action and make edit profile open as a safer sheet.
+
 ## 1.0.9+10
 
 - Show the other participant in message threads.

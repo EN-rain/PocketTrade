@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Patch, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -17,6 +19,34 @@ export class UsersController {
     @Body() dto: { displayName?: string; location?: string; profileImage?: string; notificationPreferences?: unknown },
   ) {
     return this.usersService.updateMe(user.id, dto);
+  }
+
+  @Post('me/profile-image')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 4 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new BadRequestException('Only images allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadProfileImage(
+    @CurrentUser() user: { id: number },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.usersService.uploadProfileImage(user.id, file);
+  }
+
+  @Post('me/change-password')
+  async changePassword(
+    @CurrentUser() user: { id: number },
+    @Body() dto: { currentPassword?: string; newPassword?: string },
+  ) {
+    return this.usersService.changePassword(user.id, dto);
   }
 
   @Post('me/delete-request')
