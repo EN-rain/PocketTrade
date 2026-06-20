@@ -31,7 +31,7 @@ export class ListingsController {
   @UseInterceptors(
     FilesInterceptor('photos', 5, {
       storage: memoryStorage(),
-      limits: { fileSize: 8 * 1024 * 1024, files: 5 },
+      limits: { fileSize: 4 * 1024 * 1024, files: 5 },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           return cb(new BadRequestException('Only images allowed'), false);
@@ -50,8 +50,12 @@ export class ListingsController {
   }
 
   @Get('mine')
-  async mine(@CurrentUser() user: { id: number }) {
-    return this.listingsService.mine(user.id);
+  async mine(
+    @CurrentUser() user: { id: number },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.listingsService.mine(user.id, Number(page) || 1, Number(limit) || 20);
   }
 
   @Patch(':id')

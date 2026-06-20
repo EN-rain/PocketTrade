@@ -4,6 +4,14 @@ import '../storage/secure_storage.dart';
 class ApiClient {
   ApiClient({required String baseUrl, required TokenStore tokenStore})
       : _tokenStore = tokenStore,
+        _refreshDio = Dio(BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 60),
+          contentType: 'application/json',
+          responseType: ResponseType.json,
+        )),
         _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 15),
@@ -21,8 +29,20 @@ class ApiClient {
         handler.next(options);
       },
       onError: (err, handler) async {
-        if (err.response?.statusCode == 401) {
-          await _tokenStore.clear();
+        final shouldRefresh = err.response?.statusCode == 401 &&
+            err.requestOptions.extra['skipAuthRefresh'] != true &&
+            err.requestOptions.extra['retriedAfterRefresh'] != true;
+        if (shouldRefresh && await _refreshAccessToken()) {
+          final response = await _retry(err.requestOptions);
+          handler.resolve(response);
+          return;
+        }
+        if (err.response?.statusCode == 401 &&
+            err.requestOptions.extra['skipAuthRefresh'] != true) {
+          final refresh = await _tokenStore.readRefresh();
+          if (refresh == null || refresh.isEmpty) {
+            await _tokenStore.clear();
+          }
         }
         handler.next(err);
       },
@@ -30,27 +50,91 @@ class ApiClient {
   }
 
   final Dio _dio;
+  final Dio _refreshDio;
   final TokenStore _tokenStore;
 
   Dio get dio => _dio;
 
+  Future<bool> _refreshAccessToken() async {
+    final refresh = await _tokenStore.readRefresh();
+    if (refresh == null || refresh.isEmpty) return false;
+
+    try {
+      final res = await _refreshDio.post(
+        '/auth/refresh',
+        data: {'refreshToken': refresh},
+        options: Options(extra: {'skipAuthRefresh': true}),
+      );
+      final data = Map<String, dynamic>.from(res.data as Map);
+      final access = data['accessToken'] as String?;
+      final nextRefresh = data['refreshToken'] as String?;
+      if (access == null || nextRefresh == null) return false;
+
+      await _tokenStore.setTokens(access: access, refresh: nextRefresh);
+      return true;
+    } catch (_) {
+      await _tokenStore.clear();
+      return false;
+    }
+  }
+
+  Future<Response<dynamic>> _retry(RequestOptions requestOptions) {
+    final options = Options(
+      method: requestOptions.method,
+      headers: Map<String, dynamic>.from(requestOptions.headers),
+      responseType: requestOptions.responseType,
+      contentType: requestOptions.contentType,
+      followRedirects: requestOptions.followRedirects,
+      receiveTimeout: requestOptions.receiveTimeout,
+      sendTimeout: requestOptions.sendTimeout,
+      validateStatus: requestOptions.validateStatus,
+      extra: {
+        ...requestOptions.extra,
+        'retriedAfterRefresh': true,
+      },
+    );
+    options.headers?.remove('Authorization');
+    return _dio.request<dynamic>(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: options,
+      cancelToken: requestOptions.cancelToken,
+      onReceiveProgress: requestOptions.onReceiveProgress,
+      onSendProgress: requestOptions.onSendProgress,
+    );
+  }
+
+  List<dynamic> _itemsFromResponse(dynamic data) {
+    if (data is List) return List<dynamic>.from(data);
+    if (data is Map && data['items'] is List) {
+      return List<dynamic>.from(data['items'] as List);
+    }
+    return const [];
+  }
+
   Future<Map<String, dynamic>> register(String email, String password) async {
-    final res = await _dio.post('/auth/register', data: {'email': email, 'password': password});
+    final res = await _dio
+        .post('/auth/register', data: {'email': email, 'password': password});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await _dio.post('/auth/login', data: {'email': email, 'password': password});
+    final res = await _dio
+        .post('/auth/login', data: {'email': email, 'password': password});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
-    final res = await _dio.post('/auth/forgot-password', data: {'email': email});
+    final res =
+        await _dio.post('/auth/forgot-password', data: {'email': email});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<Map<String, dynamic>> resetPassword(String email, String code, String password) async {
-    final res = await _dio.post('/auth/reset-password', data: {'email': email, 'code': code, 'password': password});
+  Future<Map<String, dynamic>> resetPassword(
+      String email, String code, String password) async {
+    final res = await _dio.post('/auth/reset-password',
+        data: {'email': email, 'code': code, 'password': password});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
@@ -60,14 +144,19 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> verifyOtp(String email, String code) async {
-    final res = await _dio.post('/auth/verify-otp', data: {'email': email, 'code': code});
+    final res = await _dio
+        .post('/auth/verify-otp', data: {'email': email, 'code': code});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
   Future<void> logout() async {
     final refresh = await _tokenStore.readRefresh();
     if (refresh != null) {
-      await _dio.post('/auth/logout', data: {'refreshToken': refresh});
+      await _dio.post(
+        '/auth/logout',
+        data: {'refreshToken': refresh},
+        options: Options(extra: {'skipAuthRefresh': true}),
+      );
     }
     await _tokenStore.clear();
   }
@@ -141,35 +230,51 @@ class ApiClient {
       'colour': color,
       'location': location,
       'description': description,
-      'photos': [for (final path in imagePaths) await MultipartFile.fromFile(path)],
+      'photos': [
+        for (final path in imagePaths) await MultipartFile.fromFile(path)
+      ],
     });
     final res = await _dio.post('/listings', data: form);
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<List<dynamic>> myListings() async => List<dynamic>.from((await _dio.get('/listings/mine')).data as List);
-  Future<void> markSold(String id) async => _dio.post('/listings/$id/mark-sold');
+  Future<List<dynamic>> myListings() async =>
+      _itemsFromResponse((await _dio.get('/listings/mine')).data);
+  Future<void> markSold(String id) async =>
+      _dio.post('/listings/$id/mark-sold');
   Future<void> removeListing(String id) async => _dio.delete('/listings/$id');
-  Future<void> republish(String id) async => _dio.post('/listings/$id/republish');
+  Future<void> republish(String id) async =>
+      _dio.post('/listings/$id/republish');
 
-  Future<List<dynamic>> favorites() async => List<dynamic>.from((await _dio.get('/favorites')).data as List);
-  Future<void> addFavorite(String id) async => _dio.post('/favorites', data: {'listingId': int.parse(id)});
+  Future<List<dynamic>> favorites() async =>
+      _itemsFromResponse((await _dio.get('/favorites')).data);
+  Future<void> addFavorite(String id) async =>
+      _dio.post('/favorites', data: {'listingId': int.parse(id)});
   Future<void> removeFavorite(String id) async => _dio.delete('/favorites/$id');
 
   Future<Map<String, dynamic>> startConversation(String listingId) async {
-    final res = await _dio.post('/conversations', data: {'listingId': int.parse(listingId)});
+    final res = await _dio
+        .post('/conversations', data: {'listingId': int.parse(listingId)});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<List<dynamic>> conversations() async => List<dynamic>.from((await _dio.get('/conversations')).data as List);
-  Future<List<dynamic>> messages(String conversationId) async => List<dynamic>.from((await _dio.get('/conversations/$conversationId/messages')).data as List);
-  Future<Map<String, dynamic>> sendMessage(String conversationId, String content) async {
-    final res = await _dio.post('/conversations/$conversationId/messages', data: {'content': content});
+  Future<List<dynamic>> conversations() async =>
+      _itemsFromResponse((await _dio.get('/conversations')).data);
+  Future<List<dynamic>> messages(String conversationId) async =>
+      _itemsFromResponse(
+          (await _dio.get('/conversations/$conversationId/messages')).data);
+  Future<Map<String, dynamic>> sendMessage(
+      String conversationId, String content) async {
+    final res = await _dio.post('/conversations/$conversationId/messages',
+        data: {'content': content});
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<void> report(Map<String, dynamic> data) async => _dio.post('/reports', data: data);
+  Future<void> report(Map<String, dynamic> data) async =>
+      _dio.post('/reports', data: data);
   Future<void> blockUser(String userId) async => _dio.post('/blocks/$userId');
-  Future<void> requestAccountDeletion() async => _dio.post('/users/me/delete-request');
-  Future<void> registerPushToken(String token, String platform) async => _dio.post('/push-tokens', data: {'token': token, 'platform': platform});
+  Future<void> requestAccountDeletion() async =>
+      _dio.post('/users/me/delete-request');
+  Future<void> registerPushToken(String token, String platform) async =>
+      _dio.post('/push-tokens', data: {'token': token, 'platform': platform});
 }

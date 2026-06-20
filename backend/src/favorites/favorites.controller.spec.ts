@@ -14,9 +14,15 @@ describe('FavoritesController', () => {
         {
           provide: FavoritesService,
           useValue: {
-            list: jest.fn().mockResolvedValue([
-              { id: 1, userId: 1, listingId: 5, listing: { id: 5, brand: 'Apple', model: 'iPhone 15' } },
-            ]),
+            list: jest.fn().mockResolvedValue({
+              items: [
+                { id: 1, userId: 1, listingId: 5, listing: { id: 5, brand: 'Apple', model: 'iPhone 15' } },
+              ],
+              total: 1,
+              page: 1,
+              limit: 20,
+              pages: 1,
+            }),
             add: jest.fn().mockResolvedValue({ id: 1, userId: 1, listingId: 5 }),
           },
         },
@@ -27,8 +33,8 @@ describe('FavoritesController', () => {
   });
 
   it('list returns user favorites', async () => {
-    const result = (await controller.list({ id: 1 })) ?? [];
-    expect(result[0].listingId).toBe(5);
+    const result = await controller.list({ id: 1 });
+    expect(result.items[0].listingId).toBe(5);
   });
 
   it('add adds a favorite', async () => {

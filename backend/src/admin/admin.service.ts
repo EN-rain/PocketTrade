@@ -226,8 +226,8 @@ export class AdminService {
 
   async listReports(status: ReportStatus | undefined, page: number, limit: number) {
     const where = status ? { status } : {};
-    const skip = (Math.max(page, 1) - 1) * Math.min(limit, 100);
     const take = Math.min(Math.max(limit, 1), 25);
+    const skip = (Math.max(page, 1) - 1) * take;
     const [items, total] = await Promise.all([
       this.prisma.report.findMany({
         where,

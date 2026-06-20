@@ -21,26 +21,32 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR;
     let error: string = 'Internal Server Error';
     let message: string | string[] = 'Unexpected error';
+    const production = process.env.NODE_ENV === 'production';
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       error = this.defaultErrorName(statusCode);
       const exResponse = exception.getResponse();
-      if (typeof exResponse === 'string') {
-        message = exResponse;
-      } else if (typeof exResponse === 'object' && exResponse !== null) {
-        const r = exResponse as Record<string, unknown>;
-        message = (r.message as string | string[]) ?? exception.message;
-        if (typeof r.error === 'string') {
-          error = r.error;
+      if (production && statusCode >= 500) {
+        this.logger.error(exception.stack);
+        message = 'Unexpected error';
+      } else {
+        if (typeof exResponse === 'string') {
+          message = exResponse;
+        } else if (typeof exResponse === 'object' && exResponse !== null) {
+          const r = exResponse as Record<string, unknown>;
+          message = (r.message as string | string[]) ?? exception.message;
+          if (typeof r.error === 'string') {
+            error = r.error;
+          }
         }
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      this.logger.error(`Prisma error ${exception.code}`, exception.stack);
       if (exception.code === 'P2002') {
         statusCode = HttpStatus.CONFLICT;
         error = 'Conflict';
-        const target = (exception.meta?.target as string[]) ?? [];
-        message = `Unique constraint violation on field(s): ${target.join(', ')}`;
+        message = production ? 'Resource already exists' : `Unique constraint violation on field(s): ${((exception.meta?.target as string[]) ?? []).join(', ')}`;
       } else if (exception.code === 'P2025') {
         statusCode = HttpStatus.NOT_FOUND;
         error = 'Not Found';
@@ -48,11 +54,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         statusCode = HttpStatus.BAD_REQUEST;
         error = 'Database Error';
-        message = exception.message;
+        message = production ? 'Invalid database request' : exception.message;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
       this.logger.error(exception.stack);
+      message = production ? 'Unexpected error' : exception.message;
     }
 
     const body = {

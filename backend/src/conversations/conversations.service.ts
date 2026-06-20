@@ -28,20 +28,36 @@ export class ConversationsService {
     });
   }
 
-  async list(userId: number) {
-    return this.prisma.conversation.findMany({
-      where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
-      orderBy: { lastMessageAt: 'desc' },
-      include: this.includeConversation(),
-    });
+  async list(userId: number, page = 1, limit = 20) {
+    const take = Math.min(Math.max(limit, 1), 50);
+    const currentPage = Math.max(page, 1);
+    const skip = (currentPage - 1) * take;
+    const where = { OR: [{ buyerId: userId }, { sellerId: userId }] };
+    const [items, total] = await Promise.all([
+      this.prisma.conversation.findMany({
+        where,
+        orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
+        skip,
+        take,
+        include: this.includeConversation(),
+      }),
+      this.prisma.conversation.count({ where }),
+    ]);
+    return { items, total, page: currentPage, limit: take, pages: Math.ceil(total / take) };
   }
 
-  async messages(userId: number, conversationId: number) {
+  async messages(userId: number, conversationId: number, cursor?: number, limit = 30) {
     await this.assertParticipant(userId, conversationId);
-    return this.prisma.message.findMany({
+    const take = Math.min(Math.max(limit, 1), 50);
+    const rows = await this.prisma.message.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { id: 'desc' },
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
+    const hasMore = rows.length > take;
+    const items = rows.slice(0, take).reverse();
+    return { items, nextCursor: hasMore ? rows[take - 1]?.id : null, limit: take };
   }
 
   async send(userId: number, conversationId: number, content: string) {
@@ -51,16 +67,19 @@ export class ConversationsService {
     const conversation = await this.assertParticipant(userId, conversationId);
     const otherUserId = conversation.buyerId === userId ? conversation.sellerId : conversation.buyerId;
     if (await this.blocks.isBlocked(userId, otherUserId)) throw new ForbiddenException('Messaging is blocked');
-    const message = await this.prisma.message.create({
-      data: { conversationId, senderId: userId, content: trimmedContent },
-      include: { sender: { select: { id: true, displayName: true } } },
-    });
-    await this.prisma.conversation.update({
-      where: { id: conversationId },
-      data: { lastMessageAt: new Date() },
+    const message = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.message.create({
+        data: { conversationId, senderId: userId, content: trimmedContent },
+        include: { sender: { select: { id: true, displayName: true } } },
+      });
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+      return created;
     });
     this.gateway.emitMessage(conversationId, message);
-    await this.push.notifyUser(otherUserId, 'New message', trimmedContent.slice(0, 120));
+    void this.push.notifyUser(otherUserId, 'New message', trimmedContent.slice(0, 120)).catch(() => undefined);
     return message;
   }
 
@@ -88,7 +107,7 @@ export class ConversationsService {
 
   private includeConversation() {
     return {
-      listing: { include: { images: { orderBy: { displayOrder: 'asc' as const } } } },
+      listing: { include: { images: { orderBy: { displayOrder: 'asc' as const }, take: 1 } } },
       buyer: { select: { id: true, displayName: true } },
       seller: { select: { id: true, displayName: true } },
       messages: { orderBy: { createdAt: 'desc' as const }, take: 1 },

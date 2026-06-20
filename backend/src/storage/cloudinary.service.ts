@@ -60,6 +60,17 @@ export class CloudinaryService {
     }
   }
 
+  async deleteImage(publicId: string): Promise<void> {
+    if (!publicId) return;
+    if (this.hasCloudinaryConfig()) {
+      await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+      return;
+    }
+
+    const assetPath = join(process.cwd(), 'public', 'assets', publicId);
+    await fs.unlink(assetPath).catch(() => undefined);
+  }
+
   private hasCloudinaryConfig(): boolean {
     return Boolean(
       this.config.get<string>('CLOUDINARY_URL') ||

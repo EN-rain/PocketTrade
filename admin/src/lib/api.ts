@@ -10,7 +10,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -21,8 +21,7 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('accessToken');
       window.location.href = '/login';
     }
     return Promise.reject(error);

@@ -31,18 +31,27 @@ export class FavoritesService {
     await this.prisma.favorite.deleteMany({ where: { userId, listingId } });
   }
 
-  async list(userId: number) {
-    return this.prisma.favorite.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        listing: {
-          include: {
-            images: { orderBy: { displayOrder: 'asc' } },
-            seller: { select: { id: true, displayName: true } },
+  async list(userId: number, page = 1, limit = 20) {
+    const take = Math.min(Math.max(limit, 1), 50);
+    const currentPage = Math.max(page, 1);
+    const skip = (currentPage - 1) * take;
+    const [items, total] = await Promise.all([
+      this.prisma.favorite.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          listing: {
+            include: {
+              images: { orderBy: { displayOrder: 'asc' }, take: 1 },
+              seller: { select: { id: true, displayName: true } },
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.favorite.count({ where: { userId } }),
+    ]);
+    return { items, total, page: currentPage, limit: take, pages: Math.ceil(total / take) };
   }
 }

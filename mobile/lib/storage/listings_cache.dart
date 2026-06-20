@@ -13,6 +13,7 @@ class ListingsCache {
   ListingsCache._();
 
   static const _homeKey = 'pockettrade.home_listings.v1';
+  static const _homeTtl = Duration(minutes: 5);
 
   static Future<CachedListings?> readHomeListings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -22,6 +23,11 @@ class ListingsCache {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) return null;
+      final cachedAt = DateTime.tryParse(decoded['cachedAt'] as String? ?? '');
+      if (cachedAt == null || DateTime.now().difference(cachedAt) > _homeTtl) {
+        await prefs.remove(_homeKey);
+        return null;
+      }
       return CachedListings(
         items: decoded['items'] is List
             ? decoded['items'] as List<dynamic>

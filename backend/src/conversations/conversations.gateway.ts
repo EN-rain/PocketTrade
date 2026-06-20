@@ -16,9 +16,18 @@ interface SocketJwtPayload {
   type?: string;
 }
 
+function allowedOrigins(): string[] | boolean {
+  const configured = [
+    ...(process.env.CORS_ORIGINS?.split(',') ?? []),
+    process.env.ADMIN_ORIGIN ?? '',
+  ].map((origin) => origin.trim()).filter(Boolean);
+
+  return configured.length > 0 ? configured : process.env.NODE_ENV !== 'production';
+}
+
 @WebSocketGateway({
   cors: {
-    origin: process.env.ADMIN_ORIGIN ? [process.env.ADMIN_ORIGIN] : true,
+    origin: allowedOrigins(),
     credentials: true,
   },
 })

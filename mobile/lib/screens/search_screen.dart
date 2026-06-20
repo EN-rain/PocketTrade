@@ -28,6 +28,9 @@ class _SearchScreenState extends State<SearchScreen> {
   String _condition = 'any';
   List<Listing> _items = [];
   bool _loading = false;
+  bool _loadingMore = false;
+  int _page = 1;
+  int _pages = 1;
   String? _error;
 
   late final ApiClient _api =
@@ -50,13 +53,24 @@ class _SearchScreenState extends State<SearchScreen> {
     _Option('oldest', 'Oldest first'),
   ];
 
-  Future<void> _search() async {
+  Future<void> _search({bool reset = true}) async {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (reset) {
+      _page = 1;
+    } else if (_loading || _loadingMore || _page >= _pages) {
+      return;
+    }
+
     setState(() {
-      _loading = true;
+      if (reset) {
+        _loading = true;
+      } else {
+        _loadingMore = true;
+      }
       _error = null;
     });
     try {
+      final nextPage = reset ? 1 : _page + 1;
       final res = await _api.listListings(
         q: _qCtrl.text.trim(),
         brand: _brandCtrl.text.trim(),
@@ -66,13 +80,17 @@ class _SearchScreenState extends State<SearchScreen> {
         maxPrice: int.tryParse(_maxPriceCtrl.text.trim()),
         condition: _condition == 'any' ? null : _condition,
         sort: _sort,
-        limit: 12,
+        page: nextPage,
+        limit: 20,
       );
+      final items = (res['items'] as List<dynamic>? ?? const [])
+          .map((e) => Listing.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
       if (!mounted) return;
       setState(() {
-        _items = (res['items'] as List<dynamic>? ?? const [])
-            .map((e) => Listing.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList();
+        _page = (res['page'] as num?)?.toInt() ?? nextPage;
+        _pages = (res['pages'] as num?)?.toInt() ?? _page;
+        _items = reset ? items : [..._items, ...items];
       });
     } catch (e) {
       if (mounted) {
@@ -80,7 +98,12 @@ class _SearchScreenState extends State<SearchScreen> {
             _error = 'Search failed. Check your connection and try again.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadingMore = false;
+        });
+      }
     }
   }
 
@@ -95,13 +118,13 @@ class _SearchScreenState extends State<SearchScreen> {
       _condition = 'any';
       _sort = 'newest';
     });
-    _search();
+    _search(reset: true);
   }
 
   @override
   void initState() {
     super.initState();
-    _search();
+    _search(reset: true);
   }
 
   @override
@@ -137,7 +160,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _search,
+        onRefresh: () => _search(reset: true),
         child: CustomScrollView(
           slivers: [
             SliverPadding(
@@ -155,9 +178,9 @@ class _SearchScreenState extends State<SearchScreen> {
               const SliverFillRemaining(
                 child: Center(child: Text('No phones matched those filters.')),
               )
-            else
+            else ...[
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 sliver: SliverLayoutBuilder(
                   builder: (context, constraints) {
                     final width = constraints.crossAxisExtent;
@@ -180,6 +203,25 @@ class _SearchScreenState extends State<SearchScreen> {
                   },
                 ),
               ),
+              if (_page < _pages)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                  sliver: SliverToBoxAdapter(
+                    child: FilledButton.icon(
+                      onPressed:
+                          _loadingMore ? null : () => _search(reset: false),
+                      icon: _loadingMore
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.expand_more),
+                      label: Text(_loadingMore ? 'Loading...' : 'Load more'),
+                    ),
+                  ),
+                ),
+            ],
           ],
         ),
       ),

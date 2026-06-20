@@ -41,6 +41,7 @@ model User {
   suspensionReason String? @map("suspension_reason") @db.Text
   accountStatus AccountStatus @default(active) @map("account_status")
   passwordHash String?        @map("password_hash")
+  emailVerifiedAt DateTime?   @map("email_verified_at")
   role         UserRole       @default(user)
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
@@ -178,6 +179,8 @@ model Conversation {
   reports Report[]
 
   @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId, lastMessageAt])
+  @@index([sellerId, lastMessageAt])
   @@map("conversations")
 }
 

@@ -31,10 +31,22 @@ export class PushService {
       this.logger.log(`[FCM disabled] user=${userId} title=${title}`);
       return;
     }
-    await getMessaging().sendEachForMulticast({
+    const response = await getMessaging().sendEachForMulticast({
       tokens: tokens.map((t) => t.token),
       notification: { title, body },
     });
+    const invalidTokens = response.responses
+      .map((result, index) => ({ result, token: tokens[index]?.token }))
+      .filter(({ result }) => {
+        const code = result.error?.code;
+        return code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token';
+      })
+      .map(({ token }) => token)
+      .filter((token): token is string => Boolean(token));
+
+    if (invalidTokens.length > 0) {
+      await this.prisma.pushToken.deleteMany({ where: { token: { in: invalidTokens } } });
+    }
   }
 
   private initFirebase() {

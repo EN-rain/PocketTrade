@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -35,7 +36,11 @@ export class FavoritesController {
   }
 
   @Get()
-  async list(@CurrentUser() user: { id: number }) {
-    return this.favoritesService.list(user.id);
+  async list(
+    @CurrentUser() user: { id: number },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.favoritesService.list(user.id, Number(page) || 1, Number(limit) || 20);
   }
 }

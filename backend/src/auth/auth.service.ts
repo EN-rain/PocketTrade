@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomInt, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -45,7 +45,7 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<OtpResponse> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing?.passwordHash) {
+    if (existing?.passwordHash && existing.emailVerifiedAt) {
       throw new ConflictException('Email is already registered');
     }
 
@@ -54,11 +54,16 @@ export class AuthService {
     if (existing) {
       await this.prisma.user.update({
         where: { id: existing.id },
-        data: { passwordHash, displayName: existing.displayName ?? displayName, accountStatus: 'active' },
+        data: {
+          passwordHash,
+          displayName: existing.displayName ?? displayName,
+          accountStatus: 'active',
+          emailVerifiedAt: null,
+        },
       });
     } else {
       await this.prisma.user.create({
-        data: { email, passwordHash, displayName, role: 'user', accountStatus: 'active' },
+        data: { email, passwordHash, displayName, role: 'user', accountStatus: 'active', emailVerifiedAt: null },
       });
     }
 
@@ -70,6 +75,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || user.accountStatus !== 'active' || !user.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException('Please verify your email before logging in');
     }
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
@@ -86,7 +94,7 @@ export class AuthService {
   async forgotPassword(dto: ForgotPasswordDto): Promise<OtpResponse> {
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user?.passwordHash || user.accountStatus !== 'active') {
+    if (!user?.passwordHash || user.accountStatus !== 'active' || !user.emailVerifiedAt) {
       const expiresAt = new Date(Date.now() + 5 * 60_000);
       return {
         success: true,
@@ -100,7 +108,7 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (!existing?.passwordHash || existing.accountStatus !== 'active') {
+    if (!existing?.passwordHash || existing.accountStatus !== 'active' || !existing.emailVerifiedAt) {
       throw new UnauthorizedException('Invalid reset request');
     }
 
@@ -137,7 +145,7 @@ export class AuthService {
       data: { verified: true },
     });
 
-    const code = Math.floor(Math.random() * 1_000_000).toString().padStart(6, '0');
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const hashedOtp = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + 5 * 60_000);
 
@@ -169,6 +177,7 @@ export class AuthService {
           displayName: this.displayNameFromEmail(email),
           role: 'user',
           accountStatus: 'active',
+          emailVerifiedAt: new Date(),
           lastActiveAt: new Date(),
         },
       });
@@ -178,6 +187,7 @@ export class AuthService {
         where: { id: user.id },
         data: {
           displayName: user.displayName ?? this.displayNameFromEmail(user.email),
+          emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
           lastActiveAt: new Date(),
         },
       });
@@ -211,6 +221,7 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    await this.cleanupExpiredRevocations();
     const payload = await this.verifyRefreshToken(refreshToken);
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.accountStatus !== 'active') {
@@ -229,6 +240,7 @@ export class AuthService {
   }
 
   async logout(refreshToken: string): Promise<void> {
+    await this.cleanupExpiredRevocations();
     const payload = await this.verifyRefreshToken(refreshToken);
     await this.prisma.revokedRefreshToken.upsert({
       where: { tokenHash: this.hashToken(refreshToken) },
@@ -336,5 +348,11 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async cleanupExpiredRevocations(): Promise<void> {
+    await this.prisma.revokedRefreshToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
   }
 }

@@ -90,14 +90,15 @@ export function Listings() {
     onError: () => setLocalError('Failed to update listing price'),
   });
 
-  const items = listingsQuery.data?.items ?? [];
+  const items = useMemo(() => listingsQuery.data?.items ?? [], [listingsQuery.data?.items]);
+  const firstPageItems = firstPageQuery.data?.items;
   const total = listingsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, listingsQuery.data?.pages ?? 1);
   const isMutating = statusMutation.isPending || rejectMutation.isPending || priceMutation.isPending;
   const brands = useMemo(() => {
-    const source = firstPageQuery.data?.items ?? items;
+    const source = firstPageItems ?? items;
     return Array.from(new Set(source.map((item) => item.brand))).filter(Boolean).sort();
-  }, [firstPageQuery.data?.items, items]);
+  }, [firstPageItems, items]);
 
   const submitReject = () => {
     if (!rejectTarget) return;

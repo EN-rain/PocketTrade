@@ -16,8 +16,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
     navigate('/login', { replace: true });
   };
 

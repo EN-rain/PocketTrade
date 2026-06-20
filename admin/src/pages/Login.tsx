@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import pocketTradeBackground from '../assets/pockettrade-background.jpg';
 
 interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   user: {
     id: string;
     email: string;
@@ -15,19 +14,12 @@ interface LoginResponse {
 
 export function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const rememberedEmail = localStorage.getItem('rememberedAdminEmail') ?? '';
+  const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedAdminEmail');
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +30,7 @@ export function Login() {
         email,
         password,
       });
-      localStorage.setItem('accessToken', res.data.accessToken);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
+      sessionStorage.setItem('accessToken', res.data.accessToken);
       if (rememberMe) {
         localStorage.setItem('rememberedAdminEmail', email);
       } else {
