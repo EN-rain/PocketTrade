@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2+3
+
+- Allow a fresh OTP request immediately when email delivery fails.
+- Keep the 30-minute single-code window only after Mailjet accepts delivery.
+
 ## 1.0.1+2
 
 - Use Mailjet for all email verification and password-reset codes.
