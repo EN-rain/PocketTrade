@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -18,14 +17,12 @@ const _apiUrl = String.fromEnvironment(
   defaultValue: 'http://10.0.2.2:3000',
 );
 
-GoRouter appRouter(FlutterSecureStorage storage) {
-  final tokenStore = TokenStore(storage);
-
+GoRouter appRouter(TokenStore tokenStore) {
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: tokenStore,
-    redirect: (context, state) async {
-      final accessToken = tokenStore.accessTokenSync ?? await tokenStore.readAccess();
+    redirect: (context, state) {
+      final accessToken = tokenStore.accessTokenSync;
       final hasToken = accessToken != null && accessToken.isNotEmpty;
       final goingToLogin = state.matchedLocation == '/login';
       if (!hasToken && !goingToLogin) return '/login';

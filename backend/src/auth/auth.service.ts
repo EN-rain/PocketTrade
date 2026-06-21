@@ -29,6 +29,8 @@ type OtpIssue = {
   requestId?: number;
 };
 
+type OtpVerificationResult = 'verified' | 'invalid' | 'expired' | 'locked';
+
 type MailjetRecipient = {
   Email?: string;
   MessageID?: number | string;
@@ -67,7 +69,7 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.password, 12);
     const displayName = this.displayNameFromEmail(email);
     if (existing) {
       await this.prisma.user.update({
@@ -94,12 +96,11 @@ export class AuthService {
     if (!user || user.accountStatus !== 'active' || !user.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    const ok = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!ok) throw new UnauthorizedException('Invalid email or password');
     if (!user.emailVerifiedAt) {
       throw new UnauthorizedException('Please verify your email before logging in');
     }
-
-    const ok = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('Invalid email or password');
 
     const displayName = user.displayName ?? this.displayNameFromEmail(user.email);
     const updated = await this.prisma.user.update({
@@ -120,7 +121,8 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       };
     }
-    return this.createOtp(email, 'Password reset code sent');
+    const issued = await this.createOtp(email, 'If the email is registered, a reset code has been sent');
+    return { ...issued, message: 'If the email is registered, a reset code has been sent' };
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<AuthResponse> {
@@ -132,13 +134,14 @@ export class AuthService {
 
     await this.verifyOtpCode(email, dto.code);
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.update({
       where: { email },
       data: {
         passwordHash,
         displayName: this.displayNameFromEmail(email),
         lastActiveAt: new Date(),
+        tokenVersion: { increment: 1 },
       },
     });
     return this.authResponse(user);
@@ -243,35 +246,43 @@ export class AuthService {
   }
 
   private async verifyOtpCode(email: string, code: string): Promise<void> {
-    const req = await this.prisma.otpRequest.findFirst({
-      where: { email, verified: false, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!req) throw new UnauthorizedException('OTP expired or not found');
-    if (req.attempts >= 5) throw new UnauthorizedException('Too many attempts');
-
-    const ok = await bcrypt.compare(code, req.hashedOtp);
-    if (!ok) {
-      await this.prisma.otpRequest.update({
-        where: { id: req.id },
-        data: { attempts: { increment: 1 } },
+    const result = await this.prisma.$transaction(async (tx): Promise<OtpVerificationResult> => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${email}))`;
+      const req = await tx.otpRequest.findFirst({
+        where: { email, verified: false, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'desc' },
       });
-      throw new UnauthorizedException('Invalid OTP');
-    }
 
-    await this.prisma.otpRequest.update({
-      where: { id: req.id },
-      data: { verified: true },
+      if (!req) return 'expired';
+      if (req.attempts >= 5) return 'locked';
+
+      const ok = await bcrypt.compare(code, req.hashedOtp);
+      if (!ok) {
+        await tx.otpRequest.update({
+          where: { id: req.id },
+          data: { attempts: { increment: 1 } },
+        });
+        return 'invalid';
+      }
+
+      await tx.otpRequest.update({
+        where: { id: req.id },
+        data: { verified: true },
+      });
+      return 'verified';
     });
+
+    if (result === 'expired') throw new UnauthorizedException('OTP expired or not found');
+    if (result === 'locked') throw new UnauthorizedException('Too many attempts');
+    if (result === 'invalid') throw new UnauthorizedException('Invalid OTP');
   }
 
   async refreshTokens(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     await this.cleanupExpiredRevocations();
     const payload = await this.verifyRefreshToken(refreshToken);
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user || user.accountStatus !== 'active') {
-      throw new UnauthorizedException('User not found or inactive');
+    if (!user || user.accountStatus !== 'active' || payload.ver !== user.tokenVersion) {
+      throw new UnauthorizedException('User not found, inactive, or session revoked');
     }
 
     await this.prisma.revokedRefreshToken.create({
@@ -282,7 +293,7 @@ export class AuthService {
       },
     });
 
-    return this.issueTokens(user.id, user.email, user.role);
+    return this.issueTokens(user.id, user.email, user.role, user.tokenVersion);
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -299,14 +310,16 @@ export class AuthService {
     });
   }
 
-  private async verifyRefreshToken(refreshToken: string): Promise<{ sub: number; type: string; exp?: number }> {
-    let payload: { sub: number; type: string; exp?: number };
+  private async verifyRefreshToken(refreshToken: string): Promise<{ sub: number; type: string; ver: number; exp?: number }> {
+    let payload: { sub: number; type: string; ver: number; exp?: number };
     try {
       payload = await this.jwtService.verifyAsync(refreshToken);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
-    if (payload.type !== 'refresh') throw new UnauthorizedException('Invalid refresh token');
+    if (payload.type !== 'refresh' || !Number.isInteger(payload.ver)) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
     const revoked = await this.prisma.revokedRefreshToken.findUnique({
       where: { tokenHash: this.hashToken(refreshToken) },
     });
@@ -318,13 +331,14 @@ export class AuthService {
     userId: number,
     email: string,
     role: string,
+    tokenVersion: number,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const payload = { sub: userId, email, role };
+    const payload = { sub: userId, email, role, ver: tokenVersion };
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: this.config.get<string>('JWT_ACCESS_TTL', '15m') as unknown as number,
     });
     const refreshToken = await this.jwtService.signAsync(
-      { sub: userId, type: 'refresh', jti: randomUUID() },
+      { sub: userId, type: 'refresh', ver: tokenVersion, jti: randomUUID() },
       { expiresIn: this.config.get<string>('JWT_REFRESH_TTL', '30d') as unknown as number },
     );
     return { accessToken, refreshToken };
@@ -335,8 +349,9 @@ export class AuthService {
     email: string;
     role: string;
     displayName: string | null;
+    tokenVersion: number;
   }): Promise<AuthResponse> {
-    const tokens = await this.issueTokens(user.id, user.email, user.role);
+    const tokens = await this.issueTokens(user.id, user.email, user.role, user.tokenVersion);
     return {
       ...tokens,
       user: {

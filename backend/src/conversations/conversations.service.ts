@@ -108,8 +108,8 @@ export class ConversationsService {
   private includeConversation() {
     return {
       listing: { include: { images: { orderBy: { displayOrder: 'asc' as const }, take: 1 } } },
-      buyer: { select: { id: true, email: true, displayName: true, profileImage: true, location: true } },
-      seller: { select: { id: true, email: true, displayName: true, profileImage: true, location: true } },
+      buyer: { select: { id: true, displayName: true, profileImage: true, location: true } },
+      seller: { select: { id: true, displayName: true, profileImage: true, location: true } },
       messages: { orderBy: { createdAt: 'desc' as const }, take: 1 },
     };
   }

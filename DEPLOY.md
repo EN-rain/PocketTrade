@@ -24,6 +24,7 @@ JWT_SECRET=
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=30d
 CORS_ORIGINS=https://your-admin-domain.example
+TRUST_PROXY=1
 ADMIN_BOOTSTRAP_EMAIL=
 ADMIN_BOOTSTRAP_PASSWORD=
 CLOUDINARY_CLOUD_NAME=
@@ -48,7 +49,7 @@ FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-Use `NODE_ENV=production` in production. The backend requires a real `JWT_SECRET` when production mode is enabled.
+`JWT_SECRET` is required in every non-test environment and must contain at least 32 characters. Use `NODE_ENV=production`, HTTPS, and the correct trusted reverse-proxy hop count in production.
 
 Health and API docs:
 
@@ -92,7 +93,7 @@ For Play Store release:
 flutter build appbundle --release --dart-define=API_URL=https://your-api-domain.example
 ```
 
-Configure Android signing before producing a release build.
+Configure Android signing before producing a release build. Copy `mobile/android/key.properties.example` to `mobile/android/key.properties`, point it to a private upload keystore, and keep both files out of Git. Release builds now fail when signing is missing.
 
 ## Deployment order
 

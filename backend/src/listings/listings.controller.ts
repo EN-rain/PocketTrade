@@ -17,6 +17,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { Public } from '../auth/public.decorator';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { ListListingsQueryDto } from './dto/list-listings.dto';
@@ -56,10 +57,9 @@ export class ListingsController {
   @Get('mine')
   async mine(
     @CurrentUser() user: { id: number },
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.listingsService.mine(user.id, Number(page) || 1, Number(limit) || 20);
+    return this.listingsService.mine(user.id, query.page, query.limit);
   }
 
   @Patch(':id')

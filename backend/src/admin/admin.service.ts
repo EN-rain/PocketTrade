@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdminListingsQueryDto } from './dto/admin-listings-query.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { AdminUsersQueryDto } from './dto/admin-users-query.dto';
+import { UpdateListingDto } from '../listings/dto/update-listing.dto';
 
 @Injectable()
 export class AdminService {
@@ -25,16 +26,12 @@ export class AdminService {
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, ver: user.tokenVersion };
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: this.config.get<string>('JWT_ACCESS_TTL', '15m') as unknown as number,
     });
-    const refreshToken = await this.jwtService.signAsync(
-      { sub: user.id, type: 'refresh' },
-      { expiresIn: this.config.get<string>('JWT_REFRESH_TTL', '30d') as unknown as number },
-    );
     await this.prisma.user.update({ where: { id: user.id }, data: { lastActiveAt: new Date() } });
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
+    return { accessToken, user: { id: user.id, email: user.email, role: user.role } };
   }
 
   async dashboard() {
@@ -127,13 +124,17 @@ export class AdminService {
   async getListing(id: number) {
     const listing = await this.prisma.listing.findUnique({
       where: { id },
-      include: { images: { orderBy: { displayOrder: 'asc' } }, seller: true, reports: true },
+      include: {
+        images: { orderBy: { displayOrder: 'asc' } },
+        seller: { select: this.safeUserSelect() },
+        reports: true,
+      },
     });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
     return listing;
   }
 
-  async updateListing(id: number, adminId: number, dto: Record<string, unknown>) {
+  async updateListing(id: number, adminId: number, dto: UpdateListingDto) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
     if (!listing) throw new NotFoundException(`Listing ${id} not found`);
     const data = this.sanitizeListingUpdate(dto);
@@ -189,7 +190,12 @@ export class AdminService {
     if (user.role === 'admin') throw new BadRequestException('Cannot suspend an admin');
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { accountStatus: 'suspended', suspensionReason: reason ?? null },
+      data: {
+        accountStatus: 'suspended',
+        suspensionReason: reason ?? null,
+        tokenVersion: { increment: 1 },
+      },
+      select: this.safeUserSelect(),
     });
     await this.log(adminId, 'suspend_user', 'user', id, { accountStatus: user.accountStatus }, { accountStatus: updated.accountStatus, reason: reason ?? null });
     return updated;
@@ -198,9 +204,11 @@ export class AdminService {
   async restoreUser(id: number, adminId: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User ${id} not found`);
+    if (user.accountStatus === 'deleted') throw new BadRequestException('Deleted accounts cannot be restored');
     const updated = await this.prisma.user.update({
       where: { id },
       data: { accountStatus: 'active', suspensionReason: null },
+      select: this.safeUserSelect(),
     });
     await this.log(adminId, 'restore_user', 'user', id, { accountStatus: user.accountStatus }, { accountStatus: updated.accountStatus });
     return updated;
@@ -289,7 +297,24 @@ export class AdminService {
     this.dashboardCache = null;
   }
 
-  private sanitizeListingUpdate(dto: Record<string, unknown>) {
+  private safeUserSelect() {
+    return {
+      id: true,
+      email: true,
+      displayName: true,
+      profileImage: true,
+      location: true,
+      accountStatus: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      lastActiveAt: true,
+      suspensionReason: true,
+      deletionRequestedAt: true,
+    } as const;
+  }
+
+  private sanitizeListingUpdate(dto: UpdateListingDto) {
     const data: {
       brand?: string;
       model?: string;

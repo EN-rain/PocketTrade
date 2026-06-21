@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     image: true,
                     child: Center(
                       child: Image.asset(
-                        '../PocketTrade_transparent.png',
+                        'assets/images/pockettrade_transparent.png',
                         width: 168,
                         height: 168,
                         fit: BoxFit.contain,

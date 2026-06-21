@@ -42,6 +42,7 @@ model User {
   accountStatus AccountStatus @default(active) @map("account_status")
   passwordHash String?        @map("password_hash")
   emailVerifiedAt DateTime?   @map("email_verified_at")
+  tokenVersion Int            @default(0) @map("token_version")
   role         UserRole       @default(user)
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")

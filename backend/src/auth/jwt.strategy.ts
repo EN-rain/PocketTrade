@@ -9,6 +9,7 @@ export interface JwtPayload {
   email?: string;
   role?: string;
   type?: string;
+  ver?: number;
 }
 
 @Injectable()
@@ -18,14 +19,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
   ) {
     const secret = config.get<string>('JWT_SECRET');
-    if (!secret && process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET environment variable must be set in production');
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable must be set');
     }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret || 'dev-secret-change-me',
+      secretOrKey: secret,
     });
   }
 
@@ -41,11 +42,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         role: true,
         accountStatus: true,
+        tokenVersion: true,
       },
     });
 
     if (!user || user.accountStatus !== 'active') {
       throw new UnauthorizedException('Account is not active');
+    }
+    if (!Number.isInteger(payload.ver) || payload.ver !== user.tokenVersion) {
+      throw new UnauthorizedException('Session has been revoked');
     }
 
     return {

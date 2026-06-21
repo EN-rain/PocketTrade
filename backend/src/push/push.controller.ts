@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { PushService } from './push.service';
+import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 
 @Controller('push-tokens')
 export class PushController {
@@ -9,7 +10,7 @@ export class PushController {
   @Post()
   async register(
     @CurrentUser() user: { id: number },
-    @Body() dto: { token: string; platform: string; deviceId?: string },
+    @Body() dto: RegisterPushTokenDto,
   ) {
     return this.pushService.register(user.id, dto);
   }

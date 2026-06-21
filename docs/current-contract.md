@@ -74,12 +74,14 @@ Authentication uses email addresses only. SMS and phone-number login are not sup
 ```text
 GET   /users/me
 PATCH /users/me
+POST  /users/me/profile-image
+POST  /users/me/change-password
 POST  /users/me/delete-request
 ```
 
-`PATCH /users/me` accepts `displayName`, `location`, `profileImage`, and `notificationPreferences`.
+`PATCH /users/me` accepts `displayName`, `location`, and `notificationPreferences`. Profile images use the multipart upload route. Credential changes revoke all active sessions. Account deletion removes listings, clears device tokens, anonymizes the profile, and disables the account.
 
-Suspended users are rejected by the authentication strategy.
+Suspended and deleted users are rejected by the authentication strategy.
 
 ## Listings
 
@@ -185,4 +187,4 @@ Development buyer email:
 buyer@pockettrade.local
 ```
 
-In development, OTP responses include `devCode`. Production sends OTP codes by email through Mailjet.
+Verification codes are sent by email through Mailjet and are not included in API responses.

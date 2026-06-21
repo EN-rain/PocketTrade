@@ -29,6 +29,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Listing> _items = [];
   bool _loading = false;
   bool _loadingMore = false;
+  bool _filtersOpen = false;
   int _page = 1;
   int _pages = 1;
   String? _error;
@@ -118,21 +119,6 @@ class _SearchScreenState extends State<SearchScreen> {
       _sort = 'newest';
     });
     _search(reset: true);
-  }
-
-  Future<void> _openFilters() {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(sheetContext).height * 0.86,
-            child: _filterDrawer(sheetContext, setSheetState),
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -237,11 +223,27 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(child: _queryField()),
             const SizedBox(width: 8),
             IconButton.filledTonal(
-              tooltip: 'Filters',
-              onPressed: _openFilters,
-              icon: const Icon(Icons.tune),
+              tooltip: _filtersOpen ? 'Hide filters' : 'Show filters',
+              onPressed: () => setState(() => _filtersOpen = !_filtersOpen),
+              icon: AnimatedRotation(
+                turns: _filtersOpen ? 0.5 : 0,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: const Icon(Icons.tune),
+              ),
             ),
           ],
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _filtersOpen
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _inlineFilters(),
+                )
+              : const SizedBox.shrink(),
         ),
         if (_activeFilterCount > 0) ...[
           const SizedBox(height: 8),
@@ -259,57 +261,50 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _filterDrawer(
-    BuildContext context,
-    StateSetter setSheetState,
-  ) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      children: [
-        Row(
+  Widget _inlineFilters() {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      elevation: 1,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Expanded(
-              child: Text(
-                'Filters',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Close',
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.close),
+            _filterFields(),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _loading ? null : _clearFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: const Text('Clear'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _loading
+                        ? null
+                        : () {
+                            setState(() => _filtersOpen = false);
+                            _search();
+                          },
+                    icon: const Icon(Icons.search),
+                    label: const Text('Apply'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        _filterFields(setSheetState),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: _loading
-              ? null
-              : () {
-                  Navigator.of(context).maybePop();
-                  _search();
-                },
-          icon: const Icon(Icons.search),
-          label: const Text('Apply filters'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _loading
-              ? null
-              : () {
-                  Navigator.of(context).maybePop();
-                  _clearFilters();
-                },
-          icon: const Icon(Icons.filter_alt_off_outlined),
-          label: const Text('Clear all'),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _filterFields(StateSetter setSheetState) {
+  Widget _filterFields() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -330,10 +325,7 @@ class _SearchScreenState extends State<SearchScreen> {
           icon: Icons.verified_outlined,
           value: _condition,
           options: _conditions,
-          onSelected: (value) {
-            setState(() => _condition = value);
-            setSheetState(() {});
-          },
+          onSelected: (value) => setState(() => _condition = value),
         ),
         const SizedBox(height: 10),
         _compactDropdown(
@@ -341,10 +333,7 @@ class _SearchScreenState extends State<SearchScreen> {
           icon: Icons.sort,
           value: _sort,
           options: _sorts,
-          onSelected: (value) {
-            setState(() => _sort = value);
-            setSheetState(() {});
-          },
+          onSelected: (value) => setState(() => _sort = value),
         ),
       ],
     );

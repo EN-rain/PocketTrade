@@ -3,6 +3,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { ChangePasswordDto } from './dto/account-credentials.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 
 @Controller('users')
 export class UsersController {
@@ -16,7 +18,7 @@ export class UsersController {
   @Patch('me')
   async updateMe(
     @CurrentUser() user: { id: number },
-    @Body() dto: { displayName?: string; location?: string; profileImage?: string; notificationPreferences?: unknown },
+    @Body() dto: UpdateMeDto,
   ) {
     return this.usersService.updateMe(user.id, dto);
   }
@@ -44,7 +46,7 @@ export class UsersController {
   @Post('me/change-password')
   async changePassword(
     @CurrentUser() user: { id: number },
-    @Body() dto: { currentPassword?: string; newPassword?: string },
+    @Body() dto: ChangePasswordDto,
   ) {
     return this.usersService.changePassword(user.id, dto);
   }

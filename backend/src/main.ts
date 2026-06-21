@@ -17,8 +17,30 @@ function allowedOrigins(): string[] | boolean {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use('/assets', express.static(join(process.cwd(), 'public', 'assets')));
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  const expressApp = app.getHttpAdapter().getInstance() as express.Express;
+  const configuredProxy = process.env.TRUST_PROXY?.trim();
+  if (configuredProxy) {
+    const numericProxy = Number(configuredProxy);
+    expressApp.set('trust proxy', Number.isInteger(numericProxy) ? numericProxy : configuredProxy);
+  } else if (process.env.NODE_ENV === 'production') {
+    expressApp.set('trust proxy', 1);
+  }
+
+  app.use('/assets', express.static(join(process.cwd(), 'public', 'assets'), {
+    dotfiles: 'deny',
+    fallthrough: false,
+    index: false,
+    maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+    setHeaders: (response) => {
+      response.setHeader('X-Content-Type-Options', 'nosniff');
+      response.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'none'; sandbox");
+    },
+  }));
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({
     origin: allowedOrigins(),

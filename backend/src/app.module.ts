@@ -17,12 +17,14 @@ import { PushModule } from './push/push.module';
 import { ReportsModule } from './reports/reports.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { validateEnvironment } from './config/environment';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      validate: validateEnvironment,
     }),
     ThrottlerModule.forRoot([
       {

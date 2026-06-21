@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -35,9 +36,13 @@ export class FavoritesService {
     const take = Math.min(Math.max(limit, 1), 50);
     const currentPage = Math.max(page, 1);
     const skip = (currentPage - 1) * take;
+    const where: Prisma.FavoriteWhereInput = {
+      userId,
+      listing: { status: { in: ['active', 'sold'] } },
+    };
     const [items, total] = await Promise.all([
       this.prisma.favorite.findMany({
-        where: { userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
@@ -50,7 +55,7 @@ export class FavoritesService {
           },
         },
       }),
-      this.prisma.favorite.count({ where: { userId } }),
+      this.prisma.favorite.count({ where }),
     ]);
     return { items, total, page: currentPage, limit: take, pages: Math.ceil(total / take) };
   }

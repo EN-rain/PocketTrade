@@ -16,9 +16,11 @@ import { AdminBootstrapService } from './admin-bootstrap.service';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'dev-secret-change-me',
-      }),
+      useFactory: async (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET')?.trim();
+        if (!secret) throw new Error('JWT_SECRET is required');
+        return { secret };
+      },
       inject: [ConfigService],
     }),
   ],

@@ -65,7 +65,7 @@ buyer@pockettrade.local
 
 Seeded buyer and seller users do not have passwords by default. Use the OTP endpoints for those demo accounts, or create/reset a password-backed account through the mobile auth flow.
 
-In development, OTP responses include `devCode`. Production sends codes through Mailjet.
+OTP codes are delivered through Mailjet in every environment; API responses never include the code.
 
 ## Admin setup
 

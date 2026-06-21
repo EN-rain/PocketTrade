@@ -2,24 +2,14 @@ import 'package:dio/dio.dart';
 import '../storage/secure_storage.dart';
 
 class ApiClient {
-  ApiClient({required String baseUrl, required TokenStore tokenStore})
-      : _tokenStore = tokenStore,
-        _refreshDio = Dio(BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 30),
-          sendTimeout: const Duration(seconds: 60),
-          contentType: 'application/json',
-          responseType: ResponseType.json,
-        )),
-        _dio = Dio(BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 30),
-          sendTimeout: const Duration(seconds: 60),
-          contentType: 'application/json',
-          responseType: ResponseType.json,
-        )) {
+  ApiClient({
+    required String baseUrl,
+    required TokenStore tokenStore,
+    Dio? dio,
+    Dio? refreshDio,
+  })  : _tokenStore = tokenStore,
+        _refreshDio = refreshDio ?? _createDio(baseUrl),
+        _dio = dio ?? _createDio(baseUrl) {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _tokenStore.readAccess();
@@ -49,13 +39,39 @@ class ApiClient {
     ));
   }
 
+  static Dio _createDio(String baseUrl) => Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 60),
+        contentType: 'application/json',
+        responseType: ResponseType.json,
+      ));
+
+  static final Map<TokenStore, Future<bool>> _refreshOperations =
+      Map.identity();
+
   final Dio _dio;
   final Dio _refreshDio;
   final TokenStore _tokenStore;
 
   Dio get dio => _dio;
 
-  Future<bool> _refreshAccessToken() async {
+  Future<bool> _refreshAccessToken() {
+    final existing = _refreshOperations[_tokenStore];
+    if (existing != null) return existing;
+
+    late final Future<bool> operation;
+    operation = _performRefresh().whenComplete(() {
+      if (identical(_refreshOperations[_tokenStore], operation)) {
+        _refreshOperations.remove(_tokenStore);
+      }
+    });
+    _refreshOperations[_tokenStore] = operation;
+    return operation;
+  }
+
+  Future<bool> _performRefresh() async {
     final refresh = await _tokenStore.readRefresh();
     if (refresh == null || refresh.isEmpty) return false;
 
@@ -72,8 +88,14 @@ class ApiClient {
 
       await _tokenStore.setTokens(access: access, refresh: nextRefresh);
       return true;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 400 ||
+          error.response?.statusCode == 401) {
+        final currentRefresh = await _tokenStore.readRefresh();
+        if (currentRefresh == refresh) await _tokenStore.clear();
+      }
+      return false;
     } catch (_) {
-      await _tokenStore.clear();
       return false;
     }
   }
@@ -151,14 +173,19 @@ class ApiClient {
 
   Future<void> logout() async {
     final refresh = await _tokenStore.readRefresh();
-    if (refresh != null) {
-      await _dio.post(
-        '/auth/logout',
-        data: {'refreshToken': refresh},
-        options: Options(extra: {'skipAuthRefresh': true}),
-      );
+    try {
+      if (refresh != null && refresh.isNotEmpty) {
+        await _dio.post(
+          '/auth/logout',
+          data: {'refreshToken': refresh},
+          options: Options(extra: {'skipAuthRefresh': true}),
+        );
+      }
+    } catch (_) {
+      // Local logout must still succeed when the API is offline or unavailable.
+    } finally {
+      await _tokenStore.clear();
     }
-    await _tokenStore.clear();
   }
 
   Future<Map<String, dynamic>> getMe() async {

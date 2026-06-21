@@ -9,8 +9,12 @@ Last checked locally:
 ```text
 backend: npm test
 backend: npm run build
+backend: npm audit --omit=dev
+admin: npm run lint
 admin: npm run build
 mobile: flutter analyze
+mobile: flutter test
+mobile: flutter build apk --debug
 ```
 
 All checks passed.
@@ -21,8 +25,8 @@ All checks passed.
 - Email/password registration and login.
 - Email OTP creation and verification.
 - OTP-backed password reset.
-- JWT access tokens and refresh-token rotation/revocation.
-- User profile read/update and account deletion request.
+- JWT access tokens, refresh-token rotation/revocation, and account-wide session invalidation.
+- User profile read/update, validated profile-image upload, and immediate account anonymization/deactivation.
 - Listing creation with 1-5 image uploads.
 - Cloudinary image storage with local development fallback.
 - Public listing search/filter/sort.
@@ -49,7 +53,6 @@ All checks passed.
 - Seeded buyer and seller demo users do not have passwords by default.
 - Seller listing editing exists in the backend, but the Flutter "My listings" UI currently exposes only mark sold, remove, and republish actions.
 - Admin listing update exists in the backend, but the React admin table currently exposes only price editing.
-- User `profileImage` is accepted by the backend, but the Flutter profile UI does not include image upload/edit.
 - Report review can resolve or dismiss reports. Direct one-click moderation actions from a report card are not currently implemented.
 - Search analytics are based on logged text searches. Filter-only searches are not logged as search terms.
 

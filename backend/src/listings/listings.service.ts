@@ -5,7 +5,9 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { ListingStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
+import { validateImageFile } from '../common/images/image-validation';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../storage/cloudinary.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -21,13 +23,11 @@ export class ListingsService {
 
   async create(sellerId: number, dto: CreateListingDto, files: Express.Multer.File[]) {
     await this.assertActiveUser(sellerId);
-    for (const file of files) {
-      this.assertValidImage(file);
-    }
+    const extensions = files.map((file) => validateImageFile(file, 5 * 1024 * 1024));
     const uploaded: { imageUrl: string; publicId: string; displayOrder: number }[] = [];
     try {
       await Promise.all(files.map(async (file, index) => {
-        const safeName = `${Date.now()}-${index}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const safeName = `${Date.now()}-${index}-${randomUUID()}${extensions[index]}`;
         const result = await this.cloudinary.uploadImage(file.buffer, safeName, 'PocketTrade/listings');
         uploaded[index] = { imageUrl: result.url, publicId: result.publicId, displayOrder: index };
       }));
@@ -82,29 +82,32 @@ export class ListingsService {
     await this.assertActiveUser(sellerId);
     const listing = await this.assertOwnedListing(sellerId, id);
     if (listing.status === 'removed') throw new BadRequestException('Removed listings cannot be edited');
+    const requiresReview = ['active', 'sold', 'rejected', 'expired'].includes(listing.status);
     return this.prisma.listing.update({
       where: { id },
-      data: { ...dto, status: listing.status === 'active' ? 'pending' : listing.status },
-      include: this.includeListing().include,
-    });
-  }
-
-  async setStatusOwn(sellerId: number, id: number, status: ListingStatus) {
-    await this.assertActiveUser(sellerId);
-    await this.assertOwnedListing(sellerId, id);
-    return this.prisma.listing.update({
-      where: { id },
-      data: { status },
+      data: { ...dto, status: requiresReview ? 'pending' : listing.status },
       include: this.includeListing().include,
     });
   }
 
   async removeOwn(sellerId: number, id: number) {
-    await this.setStatusOwn(sellerId, id, 'removed');
+    await this.assertActiveUser(sellerId);
+    const listing = await this.assertOwnedListing(sellerId, id);
+    if (listing.status === 'removed') return;
+    await this.prisma.listing.update({ where: { id }, data: { status: 'removed' } });
   }
 
   async markSold(sellerId: number, id: number) {
-    return this.setStatusOwn(sellerId, id, 'sold');
+    await this.assertActiveUser(sellerId);
+    const listing = await this.assertOwnedListing(sellerId, id);
+    if (listing.status !== 'active') {
+      throw new BadRequestException('Only an approved active listing can be marked sold');
+    }
+    return this.prisma.listing.update({
+      where: { id },
+      data: { status: 'sold' },
+      include: this.includeListing().include,
+    });
   }
 
   async republish(sellerId: number, id: number) {
@@ -130,6 +133,9 @@ export class ListingsService {
   }
 
   async search(query: ListListingsQueryDto) {
+    if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
+      throw new BadRequestException('minPrice cannot be greater than maxPrice');
+    }
     const where: any = { status: { in: ['active', 'sold'] } };
     if (query.brand) where.brand = { equals: query.brand, mode: 'insensitive' };
     if (query.model) where.model = { contains: query.model, mode: 'insensitive' };
@@ -155,12 +161,28 @@ export class ListingsService {
       { createdAt: 'desc' as const };
     const skip = ((query.page ?? 1) - 1) * (query.limit ?? 20);
     const take = query.limit ?? 20;
-    let [items, total] = await Promise.all([
-      this.prisma.listing.findMany({ where, orderBy, skip, take, include: this.includeListingSummary().include }),
-      this.prisma.listing.count({ where }),
-    ]);
+    let items;
+    let total: number;
     if (query.sort === 'relevant' && query.q) {
-      items = items.sort((a, b) => this.relevanceScore(b, query.q!) - this.relevanceScore(a, query.q!));
+      const [rankedIds, matchingCount] = await Promise.all([
+        this.relevantListingIds(query, skip, take),
+        this.prisma.listing.count({ where }),
+      ]);
+      total = matchingCount;
+      const pageIds = rankedIds.map((row) => row.id);
+      const pageRows = pageIds.length === 0
+        ? []
+        : await this.prisma.listing.findMany({
+            where: { id: { in: pageIds } },
+            include: this.includeListingSummary().include,
+          });
+      const rowById = new Map(pageRows.map((row) => [row.id, row]));
+      items = pageIds.map((id) => rowById.get(id)).filter((row) => row !== undefined);
+    } else {
+      [items, total] = await Promise.all([
+        this.prisma.listing.findMany({ where, orderBy, skip, take, include: this.includeListingSummary().include }),
+        this.prisma.listing.count({ where }),
+      ]);
     }
     if (query.q) {
       void this.prisma.searchLog.create({
@@ -188,15 +210,37 @@ export class ListingsService {
     };
   }
 
-  private relevanceScore(listing: { brand: string; model: string; description: string }, term: string): number {
-    const q = term.toLowerCase();
-    let score = 0;
-    if (listing.brand.toLowerCase() === q) score += 8;
-    if (listing.model.toLowerCase() === q) score += 6;
-    if (listing.brand.toLowerCase().includes(q)) score += 4;
-    if (listing.model.toLowerCase().includes(q)) score += 3;
-    if (listing.description.toLowerCase().includes(q)) score += 1;
-    return score;
+  private relevantListingIds(query: ListListingsQueryDto, skip: number, take: number) {
+    const conditions: Prisma.Sql[] = [Prisma.sql`"status"::text IN ('active', 'sold')`];
+    if (query.brand) conditions.push(Prisma.sql`LOWER("brand") = LOWER(${query.brand})`);
+    if (query.model) conditions.push(Prisma.sql`"model" ILIKE ${`%${query.model}%`}`);
+    if (query.condition) conditions.push(Prisma.sql`"condition"::text = ${query.condition}`);
+    if (query.storage) conditions.push(Prisma.sql`"storage" ILIKE ${`%${query.storage}%`}`);
+    if (query.location) conditions.push(Prisma.sql`"location" ILIKE ${`%${query.location}%`}`);
+    if (query.minPrice !== undefined) conditions.push(Prisma.sql`"price" >= ${query.minPrice}`);
+    if (query.maxPrice !== undefined) conditions.push(Prisma.sql`"price" <= ${query.maxPrice}`);
+
+    const q = query.q!;
+    const contains = `%${q}%`;
+    conditions.push(Prisma.sql`(
+      "brand" ILIKE ${contains}
+      OR "model" ILIKE ${contains}
+      OR "description" ILIKE ${contains}
+    )`);
+
+    return this.prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
+      SELECT "id"
+      FROM "listings"
+      WHERE ${Prisma.join(conditions, ' AND ')}
+      ORDER BY (
+        CASE WHEN LOWER("brand") = LOWER(${q}) THEN 8 ELSE 0 END
+        + CASE WHEN LOWER("model") = LOWER(${q}) THEN 6 ELSE 0 END
+        + CASE WHEN "brand" ILIKE ${contains} THEN 4 ELSE 0 END
+        + CASE WHEN "model" ILIKE ${contains} THEN 3 ELSE 0 END
+        + CASE WHEN "description" ILIKE ${contains} THEN 1 ELSE 0 END
+      ) DESC, "created_at" DESC
+      LIMIT ${take} OFFSET ${skip}
+    `);
   }
 
   private async assertActiveUser(userId: number) {
@@ -213,31 +257,4 @@ export class ListingsService {
     return listing;
   }
 
-  private assertValidImage(file: Express.Multer.File) {
-    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
-    if (!allowedMimeTypes.has(file.mimetype)) {
-      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
-    }
-
-    const bytes = file.buffer;
-    const isJpeg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-    const isPng =
-      bytes.length > 8 &&
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a;
-    const isWebp =
-      bytes.length > 12 &&
-      bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
-      bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-
-    if (!isJpeg && !isPng && !isWebp) {
-      throw new BadRequestException('Uploaded file content is not a supported image');
-    }
-  }
 }

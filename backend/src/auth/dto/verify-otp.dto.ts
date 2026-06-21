@@ -1,7 +1,8 @@
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsString, Length, Matches, MaxLength } from 'class-validator';
 
 export class VerifyOtpDto {
   @IsEmail()
+  @MaxLength(254)
   email!: string;
 
   @IsString()

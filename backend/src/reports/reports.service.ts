@@ -1,25 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ReportReason } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateReportDto } from './dto/create-report.dto';
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    reporterId: number,
-    dto: {
-      reportedUserId?: number;
-      reportedListingId?: number;
-      conversationId?: number;
-      reason: ReportReason;
-      details?: string;
-    },
-  ) {
+  async create(reporterId: number, dto: CreateReportDto) {
     const user = await this.prisma.user.findUnique({ where: { id: reporterId } });
     if (!user || user.accountStatus !== 'active') throw new ForbiddenException('Account is not active');
-    if (!dto.reportedUserId && !dto.reportedListingId && !dto.conversationId) {
-      throw new BadRequestException('A report target is required');
+    const targetCount = [dto.reportedUserId, dto.reportedListingId, dto.conversationId]
+      .filter((value) => value !== undefined).length;
+    if (targetCount !== 1) {
+      throw new BadRequestException('Exactly one report target is required');
     }
     if (dto.reportedUserId !== undefined) {
       const reportedUser = await this.prisma.user.findUnique({

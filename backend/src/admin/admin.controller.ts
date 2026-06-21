@@ -11,7 +11,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ListingStatus, ReportStatus } from '@prisma/client';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -21,6 +20,9 @@ import { AdminLoginDto } from './dto/admin-login.dto';
 import { AdminUsersQueryDto } from './dto/admin-users-query.dto';
 import { RejectListingDto } from './dto/reject-listing.dto';
 import { SuspendUserDto } from './dto/suspend-user.dto';
+import { AdminReportsQueryDto } from './dto/admin-reports-query.dto';
+import { UpdateListingDto } from '../listings/dto/update-listing.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Controller('admin')
 @Roles('admin')
@@ -51,7 +53,7 @@ export class AdminController {
   }
 
   @Patch('listings/:id')
-  async updateListing(@Param('id', ParseIntPipe) id: number, @Body() dto: Record<string, unknown>, @CurrentUser() user: { id: number }) {
+  async updateListing(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateListingDto, @CurrentUser() user: { id: number }) {
     return this.adminService.updateListing(id, user.id, dto);
   }
 
@@ -120,8 +122,8 @@ export class AdminController {
   }
 
   @Get('reports')
-  async listReports(@Query('status') status?: ReportStatus, @Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.adminService.listReports(status, Number(page || 1), Number(limit || 20));
+  async listReports(@Query() query: AdminReportsQueryDto) {
+    return this.adminService.listReports(query.status, query.page, query.limit);
   }
 
   @Post('reports/:id/resolve')
@@ -137,7 +139,7 @@ export class AdminController {
   }
 
   @Get('activity')
-  async activity(@Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.adminService.activity(Number(page || 1), Number(limit || 20));
+  async activity(@Query() query: PaginationQueryDto) {
+    return this.adminService.activity(query.page, query.limit);
   }
 }

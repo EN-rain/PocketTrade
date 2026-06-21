@@ -81,7 +81,7 @@ POST /auth/verify-otp
 POST /auth/logout
 ```
 
-In development, the backend may return `devCode`. Production sends the code through email.
+The backend sends OTP codes by email and never returns the code in API responses.
 
 Seeded buyer and seller demo users do not have passwords unless one is set later. Use the OTP endpoints for those seeded accounts, or create/reset a password-backed account.
 

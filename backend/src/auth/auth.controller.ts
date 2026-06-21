@@ -62,6 +62,7 @@ export class AuthController {
     return this.authService.verifyOtp(dto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -69,6 +70,8 @@ export class AuthController {
     return this.authService.refreshTokens(dto.refreshToken);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Body() dto: RefreshTokenDto) {

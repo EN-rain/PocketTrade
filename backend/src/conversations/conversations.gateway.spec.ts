@@ -32,8 +32,8 @@ describe('ConversationsGateway security', () => {
   });
 
   it('accepts an active user with a valid access token', async () => {
-    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({ sub: 7 });
-    prisma.user.findUnique.mockResolvedValue({ id: 7, accountStatus: 'active' });
+    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({ sub: 7, ver: 3 });
+    prisma.user.findUnique.mockResolvedValue({ id: 7, accountStatus: 'active', tokenVersion: 3 });
     const socket = {
       handshake: { auth: { token: 'valid-token' }, headers: {} },
       data: {},
@@ -44,6 +44,21 @@ describe('ConversationsGateway security', () => {
 
     expect(socket.data.userId).toBe(7);
     expect(socket.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('disconnects a socket whose token version has been revoked', async () => {
+    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({ sub: 7, ver: 2 });
+    prisma.user.findUnique.mockResolvedValue({ id: 7, accountStatus: 'active', tokenVersion: 3 });
+    const socket = {
+      handshake: { auth: { token: 'revoked-token' }, headers: {} },
+      data: {},
+      disconnect: jest.fn(),
+    } as any;
+
+    await gateway.handleConnection(socket);
+
+    expect(socket.disconnect).toHaveBeenCalledWith(true);
+    expect(socket.data.userId).toBeUndefined();
   });
 
   it('rejects a user who is not part of the conversation', async () => {

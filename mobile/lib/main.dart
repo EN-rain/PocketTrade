@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'router.dart';
+import 'storage/secure_storage.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -14,18 +15,25 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await Firebase.initializeApp();
 
-  runApp(const ProviderScope(child: PocketTradeApp()));
+  const storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  final tokenStore = TokenStore(storage);
+  await tokenStore.hydrate();
+
+  runApp(ProviderScope(child: PocketTradeApp(tokenStore: tokenStore)));
   WidgetsBinding.instance.addPostFrameCallback((_) {
     FlutterNativeSplash.remove();
   });
 }
 
 class PocketTradeApp extends StatelessWidget {
-  const PocketTradeApp({super.key});
+  const PocketTradeApp({super.key, required this.tokenStore});
+
+  final TokenStore tokenStore;
 
   @override
   Widget build(BuildContext context) {
-    const storage = FlutterSecureStorage();
     const primary = Color(0xFF0B6B61);
     const secondary = Color(0xFF1F5FBF);
     const tertiary = Color(0xFFE59E0B);
@@ -95,7 +103,7 @@ class PocketTradeApp extends StatelessWidget {
               const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ),
       ),
-      routerConfig: appRouter(storage),
+      routerConfig: appRouter(tokenStore),
     );
   }
 }

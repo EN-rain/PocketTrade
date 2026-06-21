@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 
 @Injectable()
 export class PushService {
@@ -16,7 +17,7 @@ export class PushService {
     this.enabled = this.initFirebase();
   }
 
-  async register(userId: number, dto: { token: string; platform: string; deviceId?: string }) {
+  async register(userId: number, dto: RegisterPushTokenDto) {
     return this.prisma.pushToken.upsert({
       where: { token: dto.token },
       update: { userId, platform: dto.platform, deviceId: dto.deviceId },

@@ -438,9 +438,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Request account deletion'),
+        title: const Text('Delete account permanently'),
         content: const Text(
-          'Your account will be marked for deletion review. You can still use PocketTrade while the request is reviewed.',
+          'This immediately disables your account, removes your listings, signs out every device, and anonymizes your profile. This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -449,17 +449,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Request'),
+            child: const Text('Delete account'),
           ),
         ],
       ),
     );
     if (confirmed == true) {
-      await _api.requestAccountDeletion();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deletion request submitted')),
-      );
+      try {
+        await _api.requestAccountDeletion();
+        await widget.tokenStore.clear();
+        if (!mounted) return;
+        context.go('/login');
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not delete account')),
+        );
+      }
     }
   }
 
@@ -564,12 +570,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       currentCtrl.text,
                                       next,
                                     );
+                                    await widget.tokenStore.clear();
                                     if (!mounted) return;
                                     Navigator.of(this.context).pop();
+                                    this.context.go('/login');
                                     ScaffoldMessenger.of(this.context)
                                         .showSnackBar(
                                       const SnackBar(
-                                        content: Text('Password changed'),
+                                        content: Text(
+                                            'Password changed. Sign in again.'),
                                       ),
                                     );
                                   } catch (_) {

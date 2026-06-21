@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { AddFavoriteDto } from './dto/add-favorite.dto';
 
 @Controller('favorites')
 export class FavoritesController {
@@ -21,7 +23,7 @@ export class FavoritesController {
   @HttpCode(HttpStatus.CREATED)
   async add(
     @CurrentUser() user: { id: number },
-    @Body() dto: { listingId: number },
+    @Body() dto: AddFavoriteDto,
   ) {
     return this.favoritesService.add(user.id, dto.listingId);
   }
@@ -38,9 +40,8 @@ export class FavoritesController {
   @Get()
   async list(
     @CurrentUser() user: { id: number },
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: PaginationQueryDto = new PaginationQueryDto(),
   ) {
-    return this.favoritesService.list(user.id, Number(page) || 1, Number(limit) || 20);
+    return this.favoritesService.list(user.id, query.page, query.limit);
   }
 }

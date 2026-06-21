@@ -14,20 +14,27 @@ import { PrismaService } from '../prisma/prisma.service';
 interface SocketJwtPayload {
   sub: number;
   type?: string;
+  ver?: number;
 }
 
-function allowedOrigins(): string[] | boolean {
+function validateSocketOrigin(
+  origin: string | undefined,
+  callback: (error: Error | null, allow?: boolean) => void,
+) {
+  // Native mobile clients normally omit Origin; JWT authentication still applies.
+  if (!origin) return callback(null, true);
+
   const configured = [
     ...(process.env.CORS_ORIGINS?.split(',') ?? []),
     process.env.ADMIN_ORIGIN ?? '',
-  ].map((origin) => origin.trim()).filter(Boolean);
-
-  return configured.length > 0 ? configured : process.env.NODE_ENV !== 'production';
+  ].map((value) => value.trim()).filter(Boolean);
+  const allow = configured.includes(origin) || (configured.length === 0 && process.env.NODE_ENV !== 'production');
+  callback(allow ? null : new Error('WebSocket origin is not allowed'), allow);
 }
 
 @WebSocketGateway({
   cors: {
-    origin: allowedOrigins(),
+    origin: validateSocketOrigin,
     credentials: true,
   },
 })
@@ -50,9 +57,16 @@ export class ConversationsGateway implements OnGatewayConnection {
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
-        select: { id: true, accountStatus: true },
+        select: { id: true, accountStatus: true, tokenVersion: true },
       });
-      if (!user || user.accountStatus !== 'active') throw new Error('Inactive account');
+      if (
+        !user ||
+        user.accountStatus !== 'active' ||
+        !Number.isInteger(payload.ver) ||
+        payload.ver !== user.tokenVersion
+      ) {
+        throw new Error('Inactive account or revoked session');
+      }
 
       socket.data.userId = user.id;
     } catch {

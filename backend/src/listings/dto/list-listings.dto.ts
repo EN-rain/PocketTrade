@@ -1,14 +1,16 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsIn, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, Max, IsIn, IsEnum, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ListingCondition } from '@prisma/client';
 
 export class ListListingsQueryDto {
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   brand?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   model?: string;
 
   @IsOptional()
@@ -29,14 +31,17 @@ export class ListListingsQueryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(32)
   storage?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   location?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   q?: string;
 
   @IsOptional()
