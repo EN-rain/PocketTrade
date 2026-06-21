@@ -16,7 +16,7 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-ENV RUN_MIGRATIONS_ON_START=false
+ENV RUN_MIGRATIONS_ON_START=true
 ENV HEALTH_CHECK_DB=false
 
 RUN apk add --no-cache openssl wget
@@ -29,4 +29,5 @@ COPY backend/public ./public
 
 EXPOSE 3000
 
+# Apply committed Prisma migrations before starting the Render service.
 CMD ["sh", "-c", "if [ \"${RUN_MIGRATIONS_ON_START:-false}\" = \"true\" ]; then npx prisma migrate deploy; fi && node dist/main.js"]
