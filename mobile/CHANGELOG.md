@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.22+23
+
+- Repair the Search selector implementation and keep all filters as popup dropdowns.
+
 ## 1.0.21+22
 
 - Fix automatic single-device discovery in the Android rebuild/install script.

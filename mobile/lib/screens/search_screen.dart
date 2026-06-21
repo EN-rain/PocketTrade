@@ -346,14 +346,19 @@ class _SearchScreenState extends State<SearchScreen> {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      menuMaxHeight: 280,
+      itemHeight: 48,
+      menuMaxHeight: 240,
+      elevation: 4,
       borderRadius: BorderRadius.circular(8),
       decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       items: options
           .map((option) => DropdownMenuItem(
                 value: option.value,
-                child: Text(option.label,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(option.label,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
               ))
           .toList(),
       onChanged: (selected) {

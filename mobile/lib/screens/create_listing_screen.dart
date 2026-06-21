@@ -314,29 +314,40 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     required ValueChanged<String> onSelected,
     bool enabled = true,
   }) {
-    return DropdownButtonFormField<String>(
-      initialValue:
-          options.any((option) => option.value == value) ? value : null,
-      isExpanded: true,
-      menuMaxHeight: 280,
-      borderRadius: BorderRadius.circular(8),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
+    return ButtonTheme(
+      alignedDropdown: true,
+      child: DropdownButtonFormField<String>(
+        initialValue:
+            options.any((option) => option.value == value) ? value : null,
+        isExpanded: true,
+        itemHeight: 48,
+        menuMaxHeight: 240,
+        elevation: 4,
+        borderRadius: BorderRadius.circular(8),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+        ),
+        hint: Text(enabled ? 'Select $label' : 'Loading $label...'),
+        items: options
+            .map((option) => DropdownMenuItem(
+                  value: option.value,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      option.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ))
+            .toList(),
+        onChanged: enabled
+            ? (selected) {
+                if (selected != null) onSelected(selected);
+              }
+            : null,
       ),
-      hint: Text(enabled ? 'Select $label' : 'Loading $label...'),
-      items: options
-          .map((option) => DropdownMenuItem(
-                value: option.value,
-                child: Text(option.label,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-              ))
-          .toList(),
-      onChanged: enabled
-          ? (selected) {
-              if (selected != null) onSelected(selected);
-            }
-          : null,
     );
   }
 
