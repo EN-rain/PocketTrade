@@ -28,7 +28,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   Listing? _listing;
   String? _error;
   bool _loading = true;
-  bool _actioning = false;
+  bool _messaging = false;
+  bool _saving = false;
+  bool _reporting = false;
+  bool _blocking = false;
   bool _saved = false;
   bool _reported = false;
   bool _blocked = false;
@@ -60,7 +63,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Future<void> _toggleSaved(Listing listing) async {
-    setState(() => _actioning = true);
+    setState(() => _saving = true);
     try {
       if (_saved) {
         await _api.removeFavorite(listing.id);
@@ -72,7 +75,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_saved ? 'Saved to favorites' : 'Removed')));
     } finally {
-      if (mounted) setState(() => _actioning = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -94,7 +97,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ),
     );
     if (confirm != true) return;
-    setState(() => _actioning = true);
+    setState(() => _reporting = true);
     try {
       await _api.report({
         'reportedListingId': int.parse(listing.id),
@@ -106,7 +109,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Report submitted')));
     } finally {
-      if (mounted) setState(() => _actioning = false);
+      if (mounted) setState(() => _reporting = false);
     }
   }
 
@@ -129,7 +132,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ),
     );
     if (confirm != true) return;
-    setState(() => _actioning = true);
+    setState(() => _blocking = true);
     try {
       await _api.blockUser(listing.seller!.id);
       if (!mounted) return;
@@ -137,7 +140,17 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Seller blocked')));
     } finally {
-      if (mounted) setState(() => _actioning = false);
+      if (mounted) setState(() => _blocking = false);
+    }
+  }
+
+  Future<void> _startConversation(Listing listing) async {
+    setState(() => _messaging = true);
+    try {
+      final conversation = await _api.startConversation(listing.id);
+      if (mounted) context.push('/chat/${conversation['id']}');
+    } finally {
+      if (mounted) setState(() => _messaging = false);
     }
   }
 
@@ -248,18 +261,18 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: _actioning
-                            ? null
-                            : () async {
-                                setState(() => _actioning = true);
-                                final conversation =
-                                    await _api.startConversation(l.id);
-                                if (!mounted) return;
-                                setState(() => _actioning = false);
-                                context.push('/chat/${conversation['id']}');
-                              },
-                        icon: const Icon(Icons.chat_bubble_outline),
-                        label: const Text('Message Seller'),
+                        onPressed:
+                            _messaging ? null : () => _startConversation(l),
+                        icon: _messaging
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.chat_bubble_outline),
+                        label:
+                            Text(_messaging ? 'Opening...' : 'Message Seller'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -272,7 +285,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               foregroundColor:
                                   Theme.of(context).colorScheme.onPrimary)
                           : null,
-                      onPressed: _actioning ? null : () => _toggleSaved(l),
+                      onPressed: _saving ? null : () => _toggleSaved(l),
                       icon: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
                         child: Icon(
@@ -292,7 +305,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                   .colorScheme
                                   .onSecondaryContainer)
                           : null,
-                      onPressed: _actioning || _reported
+                      onPressed: _reporting || _reported
                           ? null
                           : () => _reportListing(l),
                       icon: AnimatedSwitcher(
@@ -315,7 +328,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                     .colorScheme
                                     .onErrorContainer)
                             : null,
-                        onPressed: _actioning || _blocked
+                        onPressed: _blocking || _blocked
                             ? null
                             : () => _blockSeller(l),
                         icon: AnimatedSwitcher(

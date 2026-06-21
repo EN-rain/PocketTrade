@@ -36,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
+  bool _formReady = false;
   String? _error;
   String? _notice;
 
@@ -254,6 +255,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadRememberedLogin();
+    Future<void>.delayed(const Duration(milliseconds: 260), () {
+      if (mounted) setState(() => _formReady = true);
+    });
   }
 
   @override
@@ -279,6 +283,14 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Text(
+                    'Welcome to PocketTrade',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Semantics(
                     label: 'PocketTrade',
                     image: true,
@@ -291,95 +303,130 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  SegmentedButton<_AuthMode>(
-                    segments: const [
-                      ButtonSegment(
-                          value: _AuthMode.signIn,
-                          icon: Icon(Icons.login),
-                          label: Text('Sign in')),
-                      ButtonSegment(
-                          value: _AuthMode.signUp,
-                          icon: Icon(Icons.person_add_alt),
-                          label: Text('Sign up')),
-                    ],
-                    selected: {
-                      _mode == _AuthMode.forgotPassword
-                          ? _AuthMode.signIn
-                          : _mode
-                    },
-                    onSelectionChanged:
-                        _loading ? null : (v) => _setMode(v.first),
-                  ),
-                  const SizedBox(height: 16),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.03),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      ),
-                      child: Column(
-                        key: ValueKey('$_mode-$_otpSent-$_resetCodeSent'),
-                        children: [
-                          _formFields(),
-                          if (_notice != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              _notice!,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                          if (_error != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.errorContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: theme.colorScheme.onErrorContainer,
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: _loading ? null : _primaryAction,
-                            icon: _loading
-                                ? const SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(_buttonIcon),
-                            label: Text(_buttonText),
-                          ),
-                          const SizedBox(height: 6),
-                          _secondaryActions(),
-                        ],
+                  const SizedBox(height: 32),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.05),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
                       ),
                     ),
+                    child: !_formReady
+                        ? const SizedBox(
+                            key: ValueKey('login-loading'),
+                            height: 176,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : Column(
+                            key: const ValueKey('login-form'),
+                            children: [
+                              SegmentedButton<_AuthMode>(
+                                segments: const [
+                                  ButtonSegment(
+                                      value: _AuthMode.signIn,
+                                      icon: Icon(Icons.login),
+                                      label: Text('Sign in')),
+                                  ButtonSegment(
+                                      value: _AuthMode.signUp,
+                                      icon: Icon(Icons.person_add_alt),
+                                      label: Text('Sign up')),
+                                ],
+                                selected: {
+                                  _mode == _AuthMode.forgotPassword
+                                      ? _AuthMode.signIn
+                                      : _mode
+                                },
+                                onSelectionChanged:
+                                    _loading ? null : (v) => _setMode(v.first),
+                              ),
+                              const SizedBox(height: 16),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                alignment: Alignment.topCenter,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 220),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) =>
+                                      FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0, 0.03),
+                                        end: Offset.zero,
+                                      ).animate(animation),
+                                      child: child,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    key: ValueKey(
+                                        '$_mode-$_otpSent-$_resetCodeSent'),
+                                    children: [
+                                      _formFields(),
+                                      if (_notice != null) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          _notice!,
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                      if (_error != null) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: theme
+                                                .colorScheme.errorContainer,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            _error!,
+                                            style: TextStyle(
+                                              color: theme
+                                                  .colorScheme.onErrorContainer,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 16),
+                                      FilledButton.icon(
+                                        onPressed:
+                                            _loading ? null : _primaryAction,
+                                        icon: _loading
+                                            ? const SizedBox(
+                                                height: 18,
+                                                width: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : Icon(_buttonIcon),
+                                        label: Text(_buttonText),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      _secondaryActions(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),

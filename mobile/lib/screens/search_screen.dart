@@ -145,71 +145,81 @@ class _SearchScreenState extends State<SearchScreen> {
         centerTitle: true,
         title: const Text('Search'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _search(reset: true),
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              sliver: SliverToBoxAdapter(child: _searchBar()),
-            ),
-            if (_loading)
-              const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()))
-            else if (_error != null)
-              SliverFillRemaining(
-                  child:
-                      Center(child: Text(_error!, textAlign: TextAlign.center)))
-            else if (_items.isEmpty)
-              const SliverFillRemaining(
-                child: Center(child: Text('No phones matched your filters.')),
-              )
-            else ...[
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                sliver: SliverLayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.crossAxisExtent;
-                    final columns = width >= 680 ? 3 : 2;
-                    return SliverGrid(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        childAspectRatio: 0.68,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) => ListingCard(
-                          listing: _items[i],
-                          onTap: () => context.push('/listing/${_items[i].id}'),
-                        ),
-                        childCount: _items.length,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (_page < _pages)
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () => _search(reset: true),
+            child: CustomScrollView(
+              slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                  sliver: SliverToBoxAdapter(
-                    child: FilledButton.icon(
-                      onPressed:
-                          _loadingMore ? null : () => _search(reset: false),
-                      icon: _loadingMore
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.expand_more),
-                      label: Text(_loadingMore ? 'Loading...' : 'Load more'),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  sliver: SliverToBoxAdapter(child: _searchBar()),
+                ),
+                if (_loading)
+                  const SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()))
+                else if (_error != null)
+                  SliverFillRemaining(
+                      child: Center(
+                          child: Text(_error!, textAlign: TextAlign.center)))
+                else if (_items.isEmpty)
+                  const SliverFillRemaining(
+                    child:
+                        Center(child: Text('No phones matched your filters.')),
+                  )
+                else ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    sliver: SliverLayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.crossAxisExtent;
+                        final columns = width >= 680 ? 3 : 2;
+                        return SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            childAspectRatio: 0.68,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) => ListingCard(
+                              listing: _items[i],
+                              onTap: () =>
+                                  context.push('/listing/${_items[i].id}'),
+                            ),
+                            childCount: _items.length,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ),
-            ],
-          ],
-        ),
+                  if (_page < _pages)
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      sliver: SliverToBoxAdapter(
+                        child: FilledButton.icon(
+                          onPressed:
+                              _loadingMore ? null : () => _search(reset: false),
+                          icon: _loadingMore
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label:
+                              Text(_loadingMore ? 'Loading...' : 'Load more'),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+          _filterOverlay(),
+        ],
       ),
     );
   }
@@ -234,17 +244,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ],
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: _filtersOpen
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _inlineFilters(),
-                )
-              : const SizedBox.shrink(),
-        ),
         if (_activeFilterCount > 0) ...[
           const SizedBox(height: 8),
           Align(
@@ -261,42 +260,95 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _inlineFilters() {
+  Widget _filterOverlay() {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      elevation: 1,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return IgnorePointer(
+      ignoring: !_filtersOpen,
+      child: AnimatedOpacity(
+        opacity: _filtersOpen ? 1 : 0,
+        duration: const Duration(milliseconds: 180),
+        child: Row(
           children: [
-            _filterFields(),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _loading ? null : _clearFilters,
-                    icon: const Icon(Icons.filter_alt_off_outlined),
-                    label: const Text('Clear'),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _filtersOpen = false),
+                child: ColoredBox(color: Colors.black.withValues(alpha: .24)),
+              ),
+            ),
+            AnimatedSlide(
+              offset: _filtersOpen ? Offset.zero : const Offset(1, 0),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: SizedBox(
+                width: MediaQuery.sizeOf(context).width.clamp(0, 420),
+                child: Material(
+                  color: theme.colorScheme.surface,
+                  elevation: 12,
+                  child: SafeArea(
+                    left: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text('Filters',
+                                    style: theme.textTheme.titleLarge),
+                              ),
+                              IconButton(
+                                tooltip: 'Close filters',
+                                onPressed: () =>
+                                    setState(() => _filtersOpen = false),
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: _filterFields(),
+                          ),
+                        ),
+                        SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _loading ? null : _clearFilters,
+                                    icon: const Icon(
+                                        Icons.filter_alt_off_outlined),
+                                    label: const Text('Clear'),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: _loading
+                                        ? null
+                                        : () {
+                                            setState(
+                                                () => _filtersOpen = false);
+                                            _search();
+                                          },
+                                    icon: const Icon(Icons.search),
+                                    label: const Text('Apply'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            setState(() => _filtersOpen = false);
-                            _search();
-                          },
-                    icon: const Icon(Icons.search),
-                    label: const Text('Apply'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -359,8 +411,7 @@ class _SearchScreenState extends State<SearchScreen> {
         crossAxisUnconstrained: false,
         style: MenuStyle(
           minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
-          maximumSize:
-              WidgetStatePropertyAll(Size(constraints.maxWidth, 280)),
+          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 280)),
           padding: const WidgetStatePropertyAll(EdgeInsets.zero),
           backgroundColor: const WidgetStatePropertyAll(Colors.white),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -417,7 +468,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           duration: const Duration(milliseconds: 180),
                           switchInCurve: Curves.easeOut,
                           switchOutCurve: Curves.easeIn,
-                          transitionBuilder: (child, animation) => FadeTransition(
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
                             opacity: animation,
                             child: SlideTransition(
                               position: Tween<Offset>(
