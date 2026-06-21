@@ -270,7 +270,7 @@ export function Listings() {
                                     setModalValue(String(item.price));
                                   }}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded disabled:opacity-50"
+                                  className="rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
                                 >
                                   Edit
                                 </button>

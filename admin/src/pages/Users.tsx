@@ -169,7 +169,7 @@ export function Users() {
                                   setReason('');
                                 }}
                                 disabled={isBusy}
-                                className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                className="rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
                               >
                                 Suspend
                               </button>
