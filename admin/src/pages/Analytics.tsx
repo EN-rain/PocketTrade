@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api.js';
+import { RefreshIconButton } from '../components/RefreshIconButton';
 
 interface SearchAnalyticsResponse {
   topTerms: Array<{ term: string; count: number }>;
@@ -22,14 +23,11 @@ export function Analytics() {
           <h1 className="admin-page-title">Search Analytics</h1>
           <p className="mt-1 text-sm text-slate-500">Cached for quick tab switching.</p>
         </div>
-        <button
-          type="button"
+        <RefreshIconButton
+          loading={isFetching}
           onClick={() => refetch()}
-          disabled={isFetching}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-        >
-          {isFetching ? 'Refreshing...' : 'Refresh'}
-        </button>
+          label="Refresh analytics"
+        />
       </div>
       {isError && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">Failed to load analytics.</div>}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">

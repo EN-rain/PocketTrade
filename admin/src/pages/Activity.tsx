@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { RefreshIconButton } from '../components/RefreshIconButton';
 
 interface ActivityItem {
   id: number;
@@ -40,14 +41,11 @@ export function Activity() {
           <h1 className="admin-page-title">Activity Log</h1>
           <p className="mt-1 text-sm text-slate-500">{data ? `${data.total.toLocaleString()} activity records` : 'Loading activity'}</p>
         </div>
-        <button
-          type="button"
+        <RefreshIconButton
+          loading={activityQuery.isFetching}
           onClick={() => activityQuery.refetch()}
-          disabled={activityQuery.isFetching}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-        >
-          {activityQuery.isFetching ? 'Refreshing...' : 'Refresh'}
-        </button>
+          label="Refresh activity"
+        />
       </div>
 
       {activityQuery.isError && (

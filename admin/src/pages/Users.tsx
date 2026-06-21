@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { RefreshIconButton } from '../components/RefreshIconButton';
+import { ActionIconButton } from '../components/ActionIconButton';
 
 interface User {
   id: number;
@@ -108,14 +110,11 @@ export function Users() {
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
           </select>
-          <button
-            type="button"
+          <RefreshIconButton
+            loading={usersQuery.isFetching}
             onClick={() => usersQuery.refetch()}
-            disabled={usersQuery.isFetching}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-          >
-            {usersQuery.isFetching ? 'Refreshing...' : 'Refresh'}
-          </button>
+            label="Refresh users"
+          />
         </div>
       </div>
 
@@ -136,7 +135,7 @@ export function Users() {
                 <th>Role</th>
                 <th>Status</th>
                 <th>Created</th>
-                <th className="text-right">Actions</th>
+                <th className="sticky right-0 z-10 min-w-[132px] bg-slate-50 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -151,7 +150,7 @@ export function Users() {
                 : items.map((user) => {
                     const isBusy = suspendMutation.variables?.id === user.id || restoreMutation.variables === user.id;
                     return (
-                      <tr key={user.id} className="hover:bg-gray-50">
+                      <tr key={user.id} className="group hover:bg-gray-50">
                         <td className="font-mono text-xs text-gray-500">{user.id}</td>
                         <td className="max-w-[280px] truncate text-gray-600">{user.email}</td>
                         <td className="max-w-[220px] truncate text-gray-600">{user.displayName || '-'}</td>
@@ -162,27 +161,26 @@ export function Users() {
                         </td>
                         <td><StatusBadge status={user.accountStatus} /></td>
                         <td className="text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
-                        <td className="text-right">
+                        <td className="sticky right-0 z-[1] min-w-[132px] bg-white text-right group-hover:bg-gray-50">
                           <div className="flex flex-wrap justify-end gap-2">
                             {user.accountStatus === 'active' ? (
-                              <button
+                              <ActionIconButton
+                                icon="suspend"
+                                label="Suspend user"
                                 onClick={() => {
                                   setSuspendTarget(user);
                                   setReason('');
                                 }}
                                 disabled={isBusy}
-                                className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
-                              >
-                                Suspend
-                              </button>
+                              />
                             ) : (
-                              <button
+                              <ActionIconButton
+                                icon="restore"
+                                label="Restore user"
+                                tone="primary"
                                 onClick={() => setRestoreTarget(user)}
                                 disabled={isBusy}
-                                className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
-                              >
-                                Restore
-                              </button>
+                              />
                             )}
                           </div>
                         </td>

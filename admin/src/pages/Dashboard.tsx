@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, Cell, CartesianGrid, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api.js';
+import { RefreshIconButton } from '../components/RefreshIconButton';
 
 interface DashboardData {
   metrics: { totalUsers: number; totalListings: number; pendingListings: number; activeListings: number; rejectedListings: number; totalReports: number; totalFavorites: number; totalMessages: number };
@@ -24,7 +25,7 @@ export function Dashboard() {
   return <div className="space-y-6">
     <section className="flex flex-col gap-4 border-b border-slate-200 pb-6 lg:flex-row lg:items-end lg:justify-between">
       <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Operations overview</p><h1 className="mt-1 text-3xl font-semibold text-slate-950">Moderation workspace</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Prioritize listings and reports that need a decision, while keeping marketplace health visible.</p></div>
-      <div className="flex items-center gap-3"><span className="text-xs text-slate-500">Updates every 30 seconds</span><button type="button" onClick={() => refetch()} disabled={isFetching} className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50">{isFetching ? 'Refreshing...' : 'Refresh data'}</button></div>
+      <div className="flex items-center gap-3"><span className="text-xs text-slate-500">Updates every 30 seconds</span><RefreshIconButton loading={isFetching} onClick={() => refetch()} label="Refresh dashboard" /></div>
     </section>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

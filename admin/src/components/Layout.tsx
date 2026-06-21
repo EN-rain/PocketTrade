@@ -43,9 +43,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col bg-slate-950 px-3 py-4 text-slate-300 shadow-2xl transition-transform duration-200 ease-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-3 pb-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-400 text-slate-950 shadow-sm">
-              <span className="text-base font-black">P</span>
-            </div>
+            <img
+              src="/favicon.png"
+              alt="PocketTrade"
+              className="h-9 w-9 rounded-lg object-cover shadow-sm"
+            />
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-300">PocketTrade</p>
               <h1 className="text-base font-semibold text-white">Admin console</h1>
@@ -76,7 +78,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="min-w-0 md:ml-[272px]">
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200/80 bg-[#f4f7fb]/95 px-4 backdrop-blur md:px-7">
           <div className="flex items-center gap-3"><button type="button" className="grid h-10 w-10 place-items-center rounded-md text-slate-600 hover:bg-white hover:text-slate-950 md:hidden" aria-label="Open navigation" onClick={() => setIsSidebarOpen(true)}><Icon name="menu" /></button><div><p className="text-xs font-medium text-slate-500">Marketplace operations</p><p className="text-sm font-semibold text-slate-900">Review, protect, and grow PocketTrade</p></div></div>
-          <span className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-500" />System online</span>
         </header>
         <main className="mx-auto w-full max-w-[1560px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>

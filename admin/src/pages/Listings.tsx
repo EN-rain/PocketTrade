@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { cloudinaryImageUrl } from '../lib/images.js';
+import { ActionIconButton } from '../components/ActionIconButton';
 
 interface Listing {
   id: number;
@@ -243,54 +244,51 @@ export function Listings() {
                           <div className="flex flex-wrap justify-end gap-2">
                             {item.status === 'pending' && (
                               <>
-                                <button
+                                <ActionIconButton
+                                  icon="approve"
+                                  label="Approve listing"
+                                  tone="primary"
                                   onClick={() => statusMutation.mutate({ id: item.id, action: 'approve' })}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
-                                >
-                                  Approve
-                                </button>
-                                <button
+                                />
+                                <ActionIconButton
+                                  icon="reject"
+                                  label="Reject listing"
                                   onClick={() => {
                                     setRejectTarget(item);
                                     setModalValue('');
                                   }}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
-                                >
-                                  Reject
-                                </button>
+                                />
                               </>
                             )}
                             {item.status !== 'pending' && (
                               <>
-                                <button
+                                <ActionIconButton
+                                  icon="edit"
+                                  label="Edit listing price"
                                   onClick={() => {
                                     setPriceTarget(item);
                                     setModalValue(String(item.price));
                                   }}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded disabled:opacity-50"
-                                >
-                                  Edit
-                                </button>
+                                />
                                 {item.status !== 'removed' && (
-                                  <button
+                                  <ActionIconButton
+                                    icon="remove"
+                                    label="Remove listing"
                                     onClick={() => statusMutation.mutate({ id: item.id, action: 'remove' })}
                                     disabled={itemBusy}
-                                    className="px-2 py-1 text-xs font-medium bg-gray-700 text-white rounded disabled:opacity-50"
-                                  >
-                                    Remove
-                                  </button>
+                                  />
                                 )}
                                 {item.status === 'removed' && (
-                                  <button
+                                  <ActionIconButton
+                                    icon="restore"
+                                    label="Restore listing"
+                                    tone="primary"
                                     onClick={() => statusMutation.mutate({ id: item.id, action: 'restore' })}
                                     disabled={itemBusy}
-                                    className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded disabled:opacity-50"
-                                  >
-                                    Restore
-                                  </button>
+                                  />
                                 )}
                               </>
                             )}

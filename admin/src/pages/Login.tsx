@@ -14,10 +14,8 @@ interface LoginResponse {
 
 export function Login() {
   const navigate = useNavigate();
-  const rememberedEmail = localStorage.getItem('rememberedAdminEmail') ?? '';
-  const [email, setEmail] = useState(rememberedEmail);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +29,6 @@ export function Login() {
         password,
       });
       sessionStorage.setItem('accessToken', res.data.accessToken);
-      if (rememberMe) {
-        localStorage.setItem('rememberedAdminEmail', email);
-      } else {
-        localStorage.removeItem('rememberedAdminEmail');
-      }
       navigate('/dashboard', { replace: true });
     } catch (err) {
       if (err && typeof err === 'object' && 'response' in err) {
@@ -88,15 +81,6 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-            />
-            Remember me
-          </label>
           <button
             type="submit"
             disabled={loading}
