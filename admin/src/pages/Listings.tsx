@@ -158,9 +158,24 @@ export function Listings() {
             type="button"
             onClick={() => listingsQuery.refetch()}
             disabled={listingsQuery.isFetching}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+            aria-label="Refresh listings"
+            title="Refresh listings"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
           >
-            {listingsQuery.isFetching ? 'Refreshing...' : 'Refresh'}
+            <svg
+              className={`h-5 w-5 ${listingsQuery.isFetching ? 'animate-spin' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5m-5 4a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"
+              />
+            </svg>
           </button>
         </div>
       </div>
@@ -183,7 +198,7 @@ export function Listings() {
                 <th>Price</th>
                 <th>Status</th>
                 <th>Created</th>
-                <th className="text-right">Actions</th>
+                <th className="sticky right-0 z-10 min-w-[150px] bg-gray-50 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -202,7 +217,7 @@ export function Listings() {
                       priceMutation.variables?.id === item.id
                     );
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr key={item.id} className="group hover:bg-gray-50">
                         <td>
                           {item.images && item.images.length > 0 ? (
                             <img
@@ -224,7 +239,7 @@ export function Listings() {
                         <td className="text-gray-900">₱{Number(item.price).toLocaleString('en-PH')}</td>
                         <td><StatusBadge status={item.status} /></td>
                         <td className="text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
-                        <td className="text-right">
+                        <td className="sticky right-0 z-[1] min-w-[150px] bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)] group-hover:bg-gray-50">
                           <div className="flex flex-wrap justify-end gap-2">
                             {item.status === 'pending' && (
                               <>

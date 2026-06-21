@@ -33,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-900
+          fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-900
           transform transition-transform duration-200 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
@@ -84,7 +84,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1 md:ml-64">
         {/* Mobile header */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white p-4 md:hidden">
           <h1 className="text-base font-semibold text-slate-900">PocketTrade Admin</h1>
