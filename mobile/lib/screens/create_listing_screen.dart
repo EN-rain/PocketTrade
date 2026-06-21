@@ -86,7 +86,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final picker = ImagePicker();
     try {
       final picked = await picker.pickMultiImage(imageQuality: 80);
-      if (picked.isNotEmpty) setState(() => _photos = picked.take(5).toList());
+      final selected = picked.take(5).toList();
+      final sizes = await Future.wait(
+          selected.map((photo) => File(photo.path).length()));
+      final totalBytes = sizes.fold<int>(0, (total, size) => total + size);
+      if (totalBytes > 5 * 1024 * 1024) {
+        setState(() => _error = 'Listing photos must total 5 MB or smaller');
+        return;
+      }
+      if (selected.isNotEmpty) setState(() => _photos = selected);
     } catch (e) {
       setState(() => _error = 'Photo picker error: $e');
     }
@@ -320,8 +328,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       expanded: expanded,
       label: '$label: $valueLabel',
       child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -352,7 +360,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           ],
                         ),
                       ),
-                      Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                      AnimatedRotation(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        turns: expanded ? .5 : 0,
+                        child: const Icon(Icons.expand_more),
+                      ),
                       const SizedBox(width: 8),
                     ],
                   ),
@@ -505,7 +518,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     Icon(Icons.add_a_photo,
                         size: 32, color: theme.colorScheme.primary),
                     const SizedBox(height: 8),
-                    const Text('Tap to select 1-5 photos'),
+                    const Text('Tap to select 1-5 photos (5 MB total)'),
                   ],
                 ),
               )

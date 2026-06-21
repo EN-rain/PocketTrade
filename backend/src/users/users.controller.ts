@@ -25,7 +25,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: memoryStorage(),
-      limits: { fileSize: 4 * 1024 * 1024 },
+      limits: { fileSize: 1 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           return cb(new BadRequestException('Only images allowed'), false);

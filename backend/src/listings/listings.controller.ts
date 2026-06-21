@@ -31,7 +31,7 @@ export class ListingsController {
   @UseInterceptors(
     FilesInterceptor('photos', 5, {
       storage: memoryStorage(),
-      limits: { fileSize: 4 * 1024 * 1024, files: 5 },
+      limits: { fileSize: 5 * 1024 * 1024, files: 5 },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           return cb(new BadRequestException('Only images allowed'), false);
@@ -46,6 +46,10 @@ export class ListingsController {
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (!files?.length) throw new BadRequestException('At least one photo is required');
+    const totalSize = files.reduce((total, file) => total + file.size, 0);
+    if (totalSize > 5 * 1024 * 1024) {
+      throw new BadRequestException('Listing photos must total 5 MB or smaller');
+    }
     return this.listingsService.create(user.id, dto, files);
   }
 

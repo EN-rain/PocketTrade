@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.19+20
+
+- Limit profile photos to 1 MB and all listing photos combined to 5 MB.
+- Remove Profile section surfaces and smooth inline selector motion.
+
 ## 1.0.18+19
 
 - Stack Sell price and condition controls, replace Search filter popups with inline options, and add visible safety-action states.

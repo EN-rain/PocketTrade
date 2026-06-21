@@ -195,6 +195,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       maxWidth: 1200,
                                     );
                                     if (image != null) {
+                                      final bytes =
+                                          await File(image.path).length();
+                                      if (bytes > 1 * 1024 * 1024) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(this.context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Profile photo must be 1 MB or smaller'),
+                                          ));
+                                        }
+                                        return;
+                                      }
                                       setSheetState(() => pickedImage = image);
                                     }
                                   },
@@ -708,13 +720,8 @@ class _ProfileHeader extends StatelessWidget {
     final location = user?.location?.trim();
     final imageUrl = user?.profileImage?.trim();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         children: [
           Semantics(
@@ -808,14 +815,7 @@ class _Section extends StatelessWidget {
             ),
           ),
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-          ),
-          child: Column(children: children),
-        ),
+        Column(children: children),
       ],
     );
   }

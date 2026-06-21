@@ -75,8 +75,8 @@ export class UsersService {
     if (!allowedMimeTypes.has(file.mimetype)) {
       throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
     }
-    if (file.size > 4 * 1024 * 1024) {
-      throw new BadRequestException('Profile image must be 4 MB or smaller');
+    if (file.size > 1 * 1024 * 1024) {
+      throw new BadRequestException('Profile image must be 1 MB or smaller');
     }
   }
 }
