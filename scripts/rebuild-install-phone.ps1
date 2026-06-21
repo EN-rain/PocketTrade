@@ -59,7 +59,8 @@ try {
     Set-Stage 70 "Finding your phone..."
     $serial = Get-ConnectedDevice
     Set-Stage 80 "Installing APK on $serial..."
-    & $adb -s $serial install -r $apk | Out-Host
+    # Wireless ADB on this phone is more reliable with a pushed install.
+    & $adb -s $serial install -r --no-streaming $apk | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "APK install failed with exit code $LASTEXITCODE." }
     Set-Stage 95 "Launching PocketTrade..."
     & $adb -s $serial shell monkey -p com.pocket_trade -c android.intent.category.LAUNCHER 1 | Out-Host
