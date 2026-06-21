@@ -246,7 +246,7 @@ export function Listings() {
                                 <button
                                   onClick={() => statusMutation.mutate({ id: item.id, action: 'approve' })}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                  className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                                 >
                                   Approve
                                 </button>
@@ -256,7 +256,7 @@ export function Listings() {
                                     setModalValue('');
                                   }}
                                   disabled={itemBusy}
-                                  className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                  className="rounded bg-slate-700 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
                                 >
                                   Reject
                                 </button>
@@ -379,10 +379,10 @@ export function Listings() {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    active: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-    sold: 'bg-blue-100 text-blue-800',
+    pending: 'bg-slate-100 text-slate-700',
+    active: 'bg-emerald-100 text-emerald-800',
+    rejected: 'bg-slate-200 text-slate-800',
+    sold: 'bg-slate-100 text-slate-700',
     removed: 'bg-gray-100 text-gray-800',
     expired: 'bg-gray-100 text-gray-800',
   };
