@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.25+26
+
+- Make the Search filter overlay fill the screen body and block all interaction behind it.
+
 ## 1.0.24+25
 
 - Set Search filter overlay to 70% screen width and make the login loading indicator visible.

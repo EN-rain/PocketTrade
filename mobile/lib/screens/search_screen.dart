@@ -147,78 +147,82 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: () => _search(reset: true),
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  sliver: SliverToBoxAdapter(child: _searchBar()),
-                ),
-                if (_loading)
-                  const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()))
-                else if (_error != null)
-                  SliverFillRemaining(
-                      child: Center(
-                          child: Text(_error!, textAlign: TextAlign.center)))
-                else if (_items.isEmpty)
-                  const SliverFillRemaining(
-                    child:
-                        Center(child: Text('No phones matched your filters.')),
-                  )
-                else ...[
+          IgnorePointer(
+            ignoring: _filtersOpen,
+            child: RefreshIndicator(
+              onRefresh: () => _search(reset: true),
+              child: CustomScrollView(
+                slivers: [
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    sliver: SliverLayoutBuilder(
-                      builder: (context, constraints) {
-                        final width = constraints.crossAxisExtent;
-                        final columns = width >= 680 ? 3 : 2;
-                        return SliverGrid(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            childAspectRatio: 0.68,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                          ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, i) => ListingCard(
-                              listing: _items[i],
-                              onTap: () =>
-                                  context.push('/listing/${_items[i].id}'),
-                            ),
-                            childCount: _items.length,
-                          ),
-                        );
-                      },
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    sliver: SliverToBoxAdapter(child: _searchBar()),
                   ),
-                  if (_page < _pages)
+                  if (_loading)
+                    const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()))
+                  else if (_error != null)
+                    SliverFillRemaining(
+                        child: Center(
+                            child: Text(_error!, textAlign: TextAlign.center)))
+                  else if (_items.isEmpty)
+                    const SliverFillRemaining(
+                      child: Center(
+                          child: Text('No phones matched your filters.')),
+                    )
+                  else ...[
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                      sliver: SliverToBoxAdapter(
-                        child: FilledButton.icon(
-                          onPressed:
-                              _loadingMore ? null : () => _search(reset: false),
-                          icon: _loadingMore
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.expand_more),
-                          label:
-                              Text(_loadingMore ? 'Loading...' : 'Load more'),
-                        ),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      sliver: SliverLayoutBuilder(
+                        builder: (context, constraints) {
+                          final width = constraints.crossAxisExtent;
+                          final columns = width >= 680 ? 3 : 2;
+                          return SliverGrid(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: columns,
+                              childAspectRatio: 0.68,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, i) => ListingCard(
+                                listing: _items[i],
+                                onTap: () =>
+                                    context.push('/listing/${_items[i].id}'),
+                              ),
+                              childCount: _items.length,
+                            ),
+                          );
+                        },
                       ),
                     ),
+                    if (_page < _pages)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                        sliver: SliverToBoxAdapter(
+                          child: FilledButton.icon(
+                            onPressed: _loadingMore
+                                ? null
+                                : () => _search(reset: false),
+                            icon: _loadingMore
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.expand_more),
+                            label:
+                                Text(_loadingMore ? 'Loading...' : 'Load more'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-          _filterOverlay(),
+          Positioned.fill(child: _filterOverlay()),
         ],
       ),
     );
@@ -271,6 +275,7 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Expanded(
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _filtersOpen = false),
                 child: ColoredBox(color: Colors.black.withValues(alpha: .24)),
               ),
