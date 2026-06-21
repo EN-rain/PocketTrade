@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { RefreshIconButton } from '../components/RefreshIconButton';
-import { ActionIconButton } from '../components/ActionIconButton';
 
 interface User {
   id: number;
@@ -164,23 +163,24 @@ export function Users() {
                         <td className="sticky right-0 z-[1] min-w-[132px] bg-white text-right group-hover:bg-gray-50">
                           <div className="flex flex-wrap justify-end gap-2">
                             {user.accountStatus === 'active' ? (
-                              <ActionIconButton
-                                icon="suspend"
-                                label="Suspend user"
+                              <button
                                 onClick={() => {
                                   setSuspendTarget(user);
                                   setReason('');
                                 }}
                                 disabled={isBusy}
-                              />
+                                className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                              >
+                                Suspend
+                              </button>
                             ) : (
-                              <ActionIconButton
-                                icon="restore"
-                                label="Restore user"
-                                tone="primary"
+                              <button
                                 onClick={() => setRestoreTarget(user)}
                                 disabled={isBusy}
-                              />
+                                className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                              >
+                                Restore
+                              </button>
                             )}
                           </div>
                         </td>
