@@ -16,7 +16,7 @@ import Messages from './pages/Messages'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 
-const ADMIN_ENTRY_MARKER = 'pockettrade-admin-entry'
+const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token'
 
 function App() {
   useEffect(() => {
@@ -29,8 +29,11 @@ function App() {
       ) {
         event.preventDefault()
 
+        const token = crypto.randomUUID()
+        sessionStorage.setItem(ADMIN_ENTRY_TOKEN_KEY, token)
+
         const destination = new URL('/admin', window.location.origin)
-        destination.searchParams.set('entry', ADMIN_ENTRY_MARKER)
+        destination.searchParams.set('entry', token)
         window.location.assign(destination.toString())
       }
     }
