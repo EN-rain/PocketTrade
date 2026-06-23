@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm --prefix ../admin ci && vite build && npm --prefix ../admin run build -- --base=/admin/ --outDir=../web/dist/admin --emptyOutDir=false",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview"
