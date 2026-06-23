@@ -1,38 +1,26 @@
 import { useEffect } from 'react'
 
+const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token'
+
 export function useAdminShortcut() {
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (
-        e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'z'
-      ) {
-        e.preventDefault()
-        // Fetch the random admin path that bundle-admin.mjs wrote
-        fetch('/admin-path.txt', { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : Promise.reject())
-          .then((path) => {
-            const trimmed = path.trim()
-            if (trimmed) window.location.href = trimmed
-          })
-          .catch(() => {
-            // Admin not bundled — silent fail
-          })
-      }
-      // Mac variant
-      if (
-        e.metaKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'z'
-      ) {
-        e.preventDefault()
-        fetch('/admin-path.txt', { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : Promise.reject())
-          .then((path) => {
-            const trimmed = path.trim()
-            if (trimmed) window.location.href = trimmed
-          })
-          .catch(() => {
-            // Admin not bundled — silent fail
-          })
-      }
+    function onKeyDown(event: KeyboardEvent) {
+      const usesSupportedModifier = event.ctrlKey || event.metaKey
+      const isShortcut =
+        usesSupportedModifier &&
+        event.shiftKey &&
+        event.altKey &&
+        event.key.toLowerCase() === 'z'
+
+      if (!isShortcut) return
+
+      event.preventDefault()
+      const token = crypto.randomUUID()
+      sessionStorage.setItem(ADMIN_ENTRY_TOKEN_KEY, token)
+
+      const destination = new URL('/admin', window.location.origin)
+      destination.searchParams.set('entry', token)
+      window.location.assign(destination.toString())
     }
 
     window.addEventListener('keydown', onKeyDown)
