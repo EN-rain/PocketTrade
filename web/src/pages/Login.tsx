@@ -24,8 +24,8 @@ export default function Login() {
         email: normalizedEmail,
         password,
       })
-      const { accessToken, refreshToken, user } = response.data
-      login(accessToken, refreshToken, user)
+      const { accessToken, user } = response.data
+      login(accessToken, user)
       navigate('/', { replace: true })
     } catch (requestError) {
       setError(getRequestErrorMessage(requestError, 'Invalid email or password.'))
@@ -43,51 +43,24 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
-              className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              placeholder="you@example.com"
-            />
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="you@example.com" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
-              className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              placeholder="••••••••"
-            />
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Password" />
           </div>
 
           {error && <p className="text-error text-sm" role="alert">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-primary text-white font-medium py-3 text-sm hover:bg-primary-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary text-white font-medium py-3 text-sm hover:bg-primary-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <div className="mt-4 text-center text-sm text-text-secondary space-y-2">
-          <Link to="/forgot-password" className="text-primary hover:underline block">
-            Forgot password?
-          </Link>
-          <p>
-            New to PocketTrade?{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              Create an account
-            </Link>
-          </p>
+          <Link to="/forgot-password" className="text-primary hover:underline block">Forgot password?</Link>
+          <p>New to PocketTrade? <Link to="/register" className="text-primary hover:underline font-medium">Create an account</Link></p>
         </div>
       </div>
     </div>
