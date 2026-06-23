@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { getRequestErrorMessage } from '../lib/errorMessage'
 import type { AuthResponse } from '../lib/types'
 
 export default function Login() {
@@ -12,24 +13,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
+
     try {
-      const res = await api.post<AuthResponse>('/auth/login', { email, password })
-      const { accessToken, refreshToken, user } = res.data
+      const normalizedEmail = email.trim().toLowerCase()
+      const response = await api.post<AuthResponse>('/auth/login', {
+        email: normalizedEmail,
+        password,
+      })
+      const { accessToken, refreshToken, user } = response.data
       login(accessToken, refreshToken, user)
       navigate('/', { replace: true })
-    } catch (err: any) {
-      const msg = err.response?.data?.message
-      if (Array.isArray(msg)) {
-        setError(msg.join('. '))
-      } else if (typeof msg === 'string' && msg) {
-        setError(msg)
-      } else {
-        setError('Invalid email or password')
-      }
+    } catch (requestError) {
+      setError(getRequestErrorMessage(requestError, 'Invalid email or password.'))
     } finally {
       setLoading(false)
     }
@@ -47,7 +46,8 @@ export default function Login() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
               className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               placeholder="you@example.com"
@@ -59,16 +59,15 @@ export default function Login() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
               required
               className="w-full rounded-xl border border-input-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               placeholder="••••••••"
             />
           </div>
 
-          {error && (
-            <p className="text-error text-sm">{error}</p>
-          )}
+          {error && <p className="text-error text-sm" role="alert">{error}</p>}
 
           <button
             type="submit"
