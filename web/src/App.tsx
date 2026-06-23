@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -15,7 +16,35 @@ import Messages from './pages/Messages'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 
+const ADMIN_ENTRY_MARKER = 'pockettrade-admin-entry'
+
 function App() {
+  useEffect(() => {
+    const handleAdminShortcut = (event: KeyboardEvent) => {
+      if (
+        event.ctrlKey &&
+        event.altKey &&
+        event.shiftKey &&
+        event.key.toLowerCase() === 'z'
+      ) {
+        event.preventDefault()
+
+        const adminUrl = import.meta.env.VITE_ADMIN_URL
+        if (!adminUrl) {
+          console.error('VITE_ADMIN_URL is not configured.')
+          return
+        }
+
+        const destination = new URL(adminUrl)
+        destination.searchParams.set('entry', ADMIN_ENTRY_MARKER)
+        window.location.assign(destination.toString())
+      }
+    }
+
+    window.addEventListener('keydown', handleAdminShortcut)
+    return () => window.removeEventListener('keydown', handleAdminShortcut)
+  }, [])
+
   return (
     <AuthProvider>
       <div className="min-h-dvh text-foreground animate-fade-in">
