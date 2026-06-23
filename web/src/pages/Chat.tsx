@@ -7,8 +7,7 @@ import { tokenStore } from '../lib/tokenStore'
 import { useAuth } from '../context/AuthContext'
 import type { Message, Conversation } from '../lib/types'
 import BackArrowIcon from '../components/icons/BackArrowIcon'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../lib/config'
 
 function getOtherUser(conversation: Conversation, currentUserId: number) {
   if (conversation.buyerId === currentUserId) {

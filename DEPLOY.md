@@ -23,7 +23,9 @@ DATABASE_URL=
 JWT_SECRET=
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=30d
-CORS_ORIGINS=https://your-admin-domain.example
+# Comma-separated list of HTTPS origins allowed to call this API.
+# Include every deployed frontend (web + admin + future apps).
+CORS_ORIGINS=https://your-admin-domain.example,https://pocket-trade-eight.vercel.app
 TRUST_PROXY=1
 ADMIN_BOOTSTRAP_EMAIL=
 ADMIN_BOOTSTRAP_PASSWORD=
@@ -31,6 +33,11 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 ```
+
+`CORS_ORIGINS` must list **every** frontend origin that talks to this
+API. If a deployed frontend is missing from this list, browsers will
+block requests with a CORS error and login/register will fail. Do **not**
+use `*` in production — the backend refuses it.
 
 Email delivery for OTP verification and password reset:
 
@@ -57,6 +64,32 @@ Health and API docs:
 GET /health
 GET /api-docs
 ```
+
+## Web app (`web/`)
+
+Deploy `web/` to Vercel or any static host that runs `vite build`.
+
+```bash
+cd web
+npm ci
+npm run build
+```
+
+**Required build-time variable** (Vercel → Settings → Environment Variables,
+Production scope):
+
+```env
+VITE_API_URL=https://your-api-domain.example
+```
+
+This value is inlined into the bundle at build time, so a missing or
+wrong variable will silently break `/login`, `/register`, and every
+authenticated request. The app now refuses to build/boot in production
+when `VITE_API_URL` is unset — if you see a build error referencing
+`VITE_API_URL`, set the variable in Vercel and redeploy. Do **not**
+commit `web/.env`; configure it in the host instead.
+
+The build output is written to `web/dist/`.
 
 ## Admin panel
 
@@ -98,17 +131,22 @@ Configure Android signing before producing a release build. Copy `mobile/android
 ## Deployment order
 
 1. Create the PostgreSQL database.
-2. Deploy the backend environment values.
+2. Deploy the backend environment values, including a `CORS_ORIGINS`
+   list that contains every frontend origin you ship (web + admin).
 3. Run Prisma migrations.
 4. Seed the administrator and development data only when required.
 5. Deploy the admin panel with the backend URL.
-6. Build the Android app with the same backend URL.
-7. Test registration, login, email OTP verification/reset, image upload, chat, moderation, and push notifications.
+6. Deploy the web app with the backend URL, configured as
+   `VITE_API_URL` in the host's environment variables.
+7. Build the Android app with the same backend URL.
+8. Test registration, login, email OTP verification/reset, image
+   upload, chat, moderation, and push notifications.
 
 ## Security notes
 
 - Do not commit `.env` files or service credentials.
-- Restrict `CORS_ORIGINS` to the deployed admin domain.
+- `CORS_ORIGINS` must list every deployed frontend origin; never use
+  `*` in production.
 - Rotate any credential that appears in logs or Git history.
 - Do not run development seed data in production unless it is intentional.
 - Use HTTPS for the backend, admin panel, and OAuth or email-provider callbacks.

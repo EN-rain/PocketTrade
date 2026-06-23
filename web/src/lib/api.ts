@@ -1,7 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { tokenStore } from './tokenStore'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from './config'
 
 // Separate axios instance for refresh requests to avoid interceptor loops
 export const refreshApi = axios.create({
