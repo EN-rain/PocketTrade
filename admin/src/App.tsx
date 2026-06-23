@@ -70,17 +70,24 @@ function protectedPage(child: React.ReactNode) {
 
 function App() {
   useEffect(() => {
-    const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return;
+    const sessionWatcher = window.setInterval(() => {
+      const accessToken = localStorage.getItem('adminAccessToken');
+      const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
 
-    const logoutTimer = window.setTimeout(() => {
-      localStorage.removeItem('adminAccessToken');
-      localStorage.removeItem('adminSessionExpiresAt');
-      sessionStorage.removeItem('accessToken');
-      window.location.replace('/login');
-    }, expiresAt - Date.now());
+      if (accessToken && Number.isFinite(expiresAt) && expiresAt > Date.now()) {
+        sessionStorage.setItem('accessToken', accessToken);
+        return;
+      }
 
-    return () => window.clearTimeout(logoutTimer);
+      if (accessToken || localStorage.getItem('adminSessionExpiresAt')) {
+        localStorage.removeItem('adminAccessToken');
+        localStorage.removeItem('adminSessionExpiresAt');
+        sessionStorage.removeItem('accessToken');
+        window.location.replace('/login');
+      }
+    }, 1000);
+
+    return () => window.clearInterval(sessionWatcher);
   }, []);
 
   if (!canEnterAdmin) {
