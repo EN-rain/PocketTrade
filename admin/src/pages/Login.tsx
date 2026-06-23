@@ -12,6 +12,8 @@ interface LoginResponse {
   };
 }
 
+const ADMIN_SESSION_MS = 24 * 60 * 60 * 1000;
+
 export function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -28,7 +30,9 @@ export function Login() {
         email,
         password,
       });
-      sessionStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.setItem('adminAccessToken', res.data.accessToken);
+      localStorage.setItem('adminSessionExpiresAt', String(Date.now() + ADMIN_SESSION_MS));
+      sessionStorage.removeItem('accessToken');
       navigate('/dashboard', { replace: true });
     } catch (err) {
       if (err && typeof err === 'object' && 'response' in err) {

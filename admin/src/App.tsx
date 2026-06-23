@@ -1,7 +1,47 @@
+<<<<<<< HEAD
 import { Suspense, lazy } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+=======
+import { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+>>>>>>> e30678882b587a4b63b31d5c782502ae546b44ab
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
+const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token';
+
+function hasActiveAdminSession(): boolean {
+  const accessToken = localStorage.getItem('adminAccessToken');
+  const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
+
+  if (!accessToken || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    localStorage.removeItem('adminAccessToken');
+    localStorage.removeItem('adminSessionExpiresAt');
+    sessionStorage.removeItem('accessToken');
+    return false;
+  }
+
+  sessionStorage.setItem('accessToken', accessToken);
+  return true;
+}
+
+function consumeAdminEntryToken(): boolean {
+  const url = new URL(window.location.href);
+  const providedToken = url.searchParams.get('entry');
+  const storedToken = sessionStorage.getItem(ADMIN_ENTRY_TOKEN_KEY);
+
+  sessionStorage.removeItem(ADMIN_ENTRY_TOKEN_KEY);
+
+  if (!providedToken || !storedToken || providedToken !== storedToken) {
+    return false;
+  }
+
+  url.searchParams.delete('entry');
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  return true;
+}
+
+const canEnterAdmin = hasActiveAdminSession() || consumeAdminEntryToken();
 
 const Activity = lazy(() => import('./pages/Activity').then((module) => ({ default: module.Activity })));
 const Analytics = lazy(() => import('./pages/Analytics').then((module) => ({ default: module.Analytics })));
@@ -34,8 +74,38 @@ function protectedPage(child: React.ReactNode) {
 }
 
 function App() {
+  useEffect(() => {
+    const sessionWatcher = window.setInterval(() => {
+      const accessToken = localStorage.getItem('adminAccessToken');
+      const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
+
+      if (accessToken && Number.isFinite(expiresAt) && expiresAt > Date.now()) {
+        sessionStorage.setItem('accessToken', accessToken);
+        return;
+      }
+
+      if (accessToken || localStorage.getItem('adminSessionExpiresAt')) {
+        localStorage.removeItem('adminAccessToken');
+        localStorage.removeItem('adminSessionExpiresAt');
+        sessionStorage.removeItem('accessToken');
+        window.location.replace('/login');
+      }
+    }, 1000);
+
+    return () => window.clearInterval(sessionWatcher);
+  }, []);
+
+  if (!canEnterAdmin) {
+    window.location.replace('/login');
+    return null;
+  }
+
   return (
+<<<<<<< HEAD
     <HashRouter>
+=======
+    <BrowserRouter basename="/admin">
+>>>>>>> e30678882b587a4b63b31d5c782502ae546b44ab
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
