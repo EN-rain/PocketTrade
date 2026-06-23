@@ -1,10 +1,27 @@
-import { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
-const ADMIN_ENTRY_MARKER = 'pockettrade-admin-entry';
-const ADMIN_SESSION_KEY = 'pockettrade-admin-entry-granted';
+const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token';
+
+function consumeAdminEntryToken(): boolean {
+  const url = new URL(window.location.href);
+  const providedToken = url.searchParams.get('entry');
+  const storedToken = sessionStorage.getItem(ADMIN_ENTRY_TOKEN_KEY);
+
+  sessionStorage.removeItem(ADMIN_ENTRY_TOKEN_KEY);
+
+  if (!providedToken || !storedToken || providedToken !== storedToken) {
+    return false;
+  }
+
+  url.searchParams.delete('entry');
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  return true;
+}
+
+const hasValidAdminEntry = consumeAdminEntryToken();
 
 const Activity = lazy(() => import('./pages/Activity').then((module) => ({ default: module.Activity })));
 const Analytics = lazy(() => import('./pages/Analytics').then((module) => ({ default: module.Analytics })));
@@ -28,18 +45,6 @@ function PageFallback() {
   );
 }
 
-function NotFound() {
-  return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 px-6 text-white">
-      <div className="text-center">
-        <p className="text-7xl font-black tracking-tight">404</p>
-        <h1 className="mt-4 text-xl font-semibold">Page not found</h1>
-        <p className="mt-2 text-sm text-slate-400">The requested page does not exist.</p>
-      </div>
-    </main>
-  );
-}
-
 function protectedPage(child: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -49,22 +54,9 @@ function protectedPage(child: React.ReactNode) {
 }
 
 function App() {
-  const hasEntryAccess = useMemo(() => {
-    const url = new URL(window.location.href);
-    const hasValidMarker = url.searchParams.get('entry') === ADMIN_ENTRY_MARKER;
-
-    if (hasValidMarker) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      url.searchParams.delete('entry');
-      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-      return true;
-    }
-
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-  }, []);
-
-  if (!hasEntryAccess) {
-    return <NotFound />;
+  if (!hasValidAdminEntry) {
+    window.location.replace('/login');
+    return null;
   }
 
   return (
