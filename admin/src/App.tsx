@@ -5,6 +5,19 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token';
 
+function hasActiveAdminSession(): boolean {
+  const accessToken = localStorage.getItem('adminAccessToken');
+  const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
+
+  if (!accessToken || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    localStorage.removeItem('adminAccessToken');
+    localStorage.removeItem('adminSessionExpiresAt');
+    return false;
+  }
+
+  return true;
+}
+
 function consumeAdminEntryToken(): boolean {
   const url = new URL(window.location.href);
   const providedToken = url.searchParams.get('entry');
@@ -21,7 +34,7 @@ function consumeAdminEntryToken(): boolean {
   return true;
 }
 
-const hasValidAdminEntry = consumeAdminEntryToken();
+const canEnterAdmin = hasActiveAdminSession() || consumeAdminEntryToken();
 
 const Activity = lazy(() => import('./pages/Activity').then((module) => ({ default: module.Activity })));
 const Analytics = lazy(() => import('./pages/Analytics').then((module) => ({ default: module.Analytics })));
@@ -54,7 +67,7 @@ function protectedPage(child: React.ReactNode) {
 }
 
 function App() {
-  if (!hasValidAdminEntry) {
+  if (!canEnterAdmin) {
     window.location.replace('/login');
     return null;
   }
