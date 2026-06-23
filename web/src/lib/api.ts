@@ -7,20 +7,31 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
   _retry?: boolean
 }
 
-export const refreshApi = axios.create({
+const sharedConfig = {
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-PocketTrade-Client': 'web',
+  },
+}
+
+export const refreshApi = axios.create({
+  ...sharedConfig,
   timeout: 15000,
 })
 
 export const api = axios.create({
-  baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  ...sharedConfig,
   timeout: 30000,
 })
 
 export const uploadApi = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
+  headers: {
+    'X-PocketTrade-Client': 'web',
+  },
   timeout: 60000,
 })
 
@@ -35,18 +46,9 @@ function getRefreshPromise(): Promise<string | null> {
   if (refreshPromise) return refreshPromise
 
   refreshPromise = (async () => {
-    const refreshToken = tokenStore.getRefresh()
-    if (!refreshToken) {
-      clearAuth()
-      return null
-    }
-
     try {
-      const response = await refreshApi.post<{ accessToken: string; refreshToken: string }>(
-        '/auth/refresh',
-        { refreshToken },
-      )
-      tokenStore.setTokens(response.data.accessToken, response.data.refreshToken)
+      const response = await refreshApi.post<{ accessToken: string }>('/auth/refresh', {})
+      tokenStore.setAccess(response.data.accessToken)
       return response.data.accessToken
     } catch {
       clearAuth()
@@ -75,7 +77,8 @@ function attachAuth(instance: AxiosInstance): void {
         error.response?.status === 401 &&
         originalRequest &&
         !originalRequest._retry &&
-        !originalRequest.url?.includes('/auth/refresh')
+        !originalRequest.url?.includes('/auth/refresh') &&
+        !originalRequest.url?.includes('/auth/login')
       ) {
         originalRequest._retry = true
         const newToken = await getRefreshPromise()
