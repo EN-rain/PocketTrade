@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { User } from '../lib/types'
 import { tokenStore } from '../lib/tokenStore'
-import { api } from '../lib/api'
+import { api, refreshApi } from '../lib/api'
 
 interface AuthState {
   user: User | null
@@ -19,18 +19,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const restoreSession = () => {
-      const accessToken = tokenStore.getAccess()
+    let cancelled = false
+
+    const restoreSession = async () => {
       const refreshToken = tokenStore.getRefresh()
       const storedUser = tokenStore.getUser()
 
-      if (accessToken && refreshToken && storedUser) {
-        setUserState(storedUser)
-      } else {
+      if (!refreshToken || !storedUser) {
         tokenStore.clear()
-        setUserState(null)
+        if (!cancelled) {
+          setUserState(null)
+          setIsLoading(false)
+        }
+        return
       }
-      setIsLoading(false)
+
+      try {
+        const response = await refreshApi.post<{ accessToken: string; refreshToken: string }>(
+          '/auth/refresh',
+          { refreshToken },
+        )
+        tokenStore.setTokens(response.data.accessToken, response.data.refreshToken)
+        if (!cancelled) setUserState(storedUser)
+      } catch {
+        tokenStore.clear()
+        if (!cancelled) setUserState(null)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
 
     const handleAuthCleared = () => {
@@ -39,13 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     }
 
-    restoreSession()
+    void restoreSession()
     window.addEventListener('pt-auth-cleared', handleAuthCleared)
-    window.addEventListener('storage', restoreSession)
 
     return () => {
+      cancelled = true
       window.removeEventListener('pt-auth-cleared', handleAuthCleared)
-      window.removeEventListener('storage', restoreSession)
     }
   }, [])
 
