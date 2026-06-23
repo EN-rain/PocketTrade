@@ -359,10 +359,8 @@ export default function Profile() {
 
   // Listing actions
   const listingActionMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status?: string }) => {
-      if (status) return updateListingStatus(id, status)
-      return Promise.resolve()
-    },
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      updateListingStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users', 'me', 'listings'] })
     },

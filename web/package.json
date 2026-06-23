@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/bundle-admin.mjs",
+    "bundle:admin": "node scripts/bundle-admin.mjs",
+    "prebuild": "npm run bundle:admin",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
