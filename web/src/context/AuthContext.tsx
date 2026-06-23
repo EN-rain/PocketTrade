@@ -7,7 +7,7 @@ interface AuthState {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (accessToken: string, refreshToken: string, user: User) => void
+  login: (accessToken: string, user: User) => void
   logout: () => Promise<void>
   setUser: (user: User) => void
 }
@@ -22,10 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     const restoreSession = async () => {
-      const refreshToken = tokenStore.getRefresh()
       const storedUser = tokenStore.getUser()
-
-      if (!refreshToken || !storedUser) {
+      if (!storedUser) {
         tokenStore.clear()
         if (!cancelled) {
           setUserState(null)
@@ -35,11 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const response = await refreshApi.post<{ accessToken: string; refreshToken: string }>(
-          '/auth/refresh',
-          { refreshToken },
-        )
-        tokenStore.setTokens(response.data.accessToken, response.data.refreshToken)
+        const response = await refreshApi.post<{ accessToken: string }>('/auth/refresh', {})
+        tokenStore.setAccess(response.data.accessToken)
         if (!cancelled) setUserState(storedUser)
       } catch {
         tokenStore.clear()
@@ -64,20 +59,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback((accessToken: string, refreshToken: string, user: User) => {
-    tokenStore.setTokens(accessToken, refreshToken)
+  const login = useCallback((accessToken: string, user: User) => {
+    tokenStore.setAccess(accessToken)
     tokenStore.setUser(user)
     setUserState(user)
   }, [])
 
   const logout = useCallback(async () => {
-    const refreshToken = tokenStore.getRefresh()
-    if (refreshToken) {
-      try {
-        await api.post('/auth/logout', { refreshToken })
-      } catch {
-        // Local logout must still complete when the server is unavailable.
-      }
+    try {
+      await api.post('/auth/logout', {})
+    } catch {
+      // Local logout must still complete when the server is unavailable.
     }
     tokenStore.clear()
     setUserState(null)
@@ -93,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
-        isAuthenticated: Boolean(user && tokenStore.getAccess() && tokenStore.getRefresh()),
+        isAuthenticated: Boolean(user && tokenStore.getAccess()),
         login,
         logout,
         setUser,
