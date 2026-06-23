@@ -68,7 +68,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/admin">
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
