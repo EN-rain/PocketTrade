@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -23,32 +22,7 @@ function AdminShortcutListener() {
   return null
 }
 
-const ADMIN_ENTRY_TOKEN_KEY = 'pockettrade-admin-entry-token'
-
 function App() {
-  useEffect(() => {
-    const handleAdminShortcut = (event: KeyboardEvent) => {
-      if (
-        event.ctrlKey &&
-        event.altKey &&
-        event.shiftKey &&
-        event.key.toLowerCase() === 'z'
-      ) {
-        event.preventDefault()
-
-        const token = crypto.randomUUID()
-        sessionStorage.setItem(ADMIN_ENTRY_TOKEN_KEY, token)
-
-        const destination = new URL('/admin', window.location.origin)
-        destination.searchParams.set('entry', token)
-        window.location.assign(destination.toString())
-      }
-    }
-
-    window.addEventListener('keydown', handleAdminShortcut)
-    return () => window.removeEventListener('keydown', handleAdminShortcut)
-  }, [])
-
   return (
     <AuthProvider>
       <AdminShortcutListener />
