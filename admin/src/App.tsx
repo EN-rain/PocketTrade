@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import { Suspense, lazy } from 'react';
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
-=======
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
->>>>>>> e30678882b587a4b63b31d5c782502ae546b44ab
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -101,11 +96,7 @@ function App() {
   }
 
   return (
-<<<<<<< HEAD
-    <HashRouter>
-=======
     <BrowserRouter basename="/admin">
->>>>>>> e30678882b587a4b63b31d5c782502ae546b44ab
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -119,7 +110,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
