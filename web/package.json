@@ -5,15 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-<<<<<<< HEAD
-    "predev": "node scripts/bundle-admin.mjs",
     "bundle:admin": "node scripts/bundle-admin.mjs",
-    "prebuild": "npm run bundle:admin",
-    "build": "tsc -b && vite build",
-=======
-    "build": "npm --prefix ../admin ci && vite build && npm --prefix ../admin run build -- --base=/admin/ --outDir=../web/dist/admin --emptyOutDir=false",
+    "build": "npm --prefix ../admin ci && npm run bundle:admin && tsc -b && vite build",
     "typecheck": "tsc -b",
->>>>>>> e30678882b587a4b63b31d5c782502ae546b44ab
     "lint": "eslint .",
     "preview": "vite preview"
   },
