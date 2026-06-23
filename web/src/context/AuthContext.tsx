@@ -19,11 +19,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = tokenStore.getUser()
-    if (storedUser) {
-      setUserState(storedUser)
+    const restoreSession = () => {
+      const accessToken = tokenStore.getAccess()
+      const refreshToken = tokenStore.getRefresh()
+      const storedUser = tokenStore.getUser()
+
+      if (accessToken && refreshToken && storedUser) {
+        setUserState(storedUser)
+      } else {
+        tokenStore.clear()
+        setUserState(null)
+      }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+
+    const handleAuthCleared = () => {
+      tokenStore.clear()
+      setUserState(null)
+      setIsLoading(false)
+    }
+
+    restoreSession()
+    window.addEventListener('pt-auth-cleared', handleAuthCleared)
+    window.addEventListener('storage', restoreSession)
+
+    return () => {
+      window.removeEventListener('pt-auth-cleared', handleAuthCleared)
+      window.removeEventListener('storage', restoreSession)
+    }
   }, [])
 
   const login = useCallback((accessToken: string, refreshToken: string, user: User) => {
@@ -38,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await api.post('/auth/logout', { refreshToken })
       } catch {
-        // ignore errors on logout
+        // Local logout must still complete when the server is unavailable.
       }
     }
     tokenStore.clear()
@@ -55,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated: Boolean(user && tokenStore.getAccess() && tokenStore.getRefresh()),
         login,
         logout,
         setUser,
