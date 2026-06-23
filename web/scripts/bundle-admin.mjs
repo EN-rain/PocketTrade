@@ -80,7 +80,7 @@ copyDir(adminDistDir, targetDir)
 // Step 5: Write admin-path.txt
 fs.writeFileSync(
   path.join(publicDir, 'admin-path.txt'),
-  adminPath
+  `${adminPath}#/login`
 )
 console.log(`Wrote admin-path.txt: ${adminPath}`)
 
