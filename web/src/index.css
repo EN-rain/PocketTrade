@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0B6B61;
+  --color-primary-light: #0D8577;
+  --color-primary-dark: #08544B;
+  --color-secondary: #1F5FBF;
+  --color-tertiary: #E59E0B;
+  --color-background: transparent;
+  --color-surface: #FFFFFF;
+  --color-surface-high: #eef2f6;
+  --color-error: #B42318;
+  --color-foreground: #10201D;
+  --color-nav-indicator: #e3e8ef;
+  --color-input-border: #d1d5db;
+  --color-card-border: #e0e4ea;
+  --color-text-primary: #10201D;
+  --color-text-secondary: #4A554F;
+  --color-text-muted: #8A958F;
+
+  --font-sans: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: transparent;
+    background-image: url('/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+    transition: background-color 0.3s ease;
+  }
+  a, button, input, select, textarea {
+    transition: all 0.2s ease;
+  }
+  img {
+    transition: transform 0.3s ease;
+  }
+  input, button, select, textarea {
+    font-family: inherit;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out both;
+  }
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
