@@ -1,23 +1,35 @@
-import axios, { AxiosError } from 'axios'
+import axios from 'axios'
+import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { tokenStore } from './tokenStore'
 import { API_URL } from './config'
 
-// Separate axios instance for refresh requests to avoid interceptor loops
+interface RetryableRequest extends InternalAxiosRequestConfig {
+  _retry?: boolean
+}
+
 export const refreshApi = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 })
 
-// Main API instance with interceptors
 export const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 })
 
-// Deduplicate concurrent refresh attempts with a single promise
+export const uploadApi = axios.create({
+  baseURL: API_URL,
+  timeout: 60000,
+})
+
 let refreshPromise: Promise<string | null> | null = null
+
+function clearAuth(): void {
+  tokenStore.clear()
+  window.dispatchEvent(new Event('pt-auth-cleared'))
+}
 
 function getRefreshPromise(): Promise<string | null> {
   if (refreshPromise) return refreshPromise
@@ -25,19 +37,19 @@ function getRefreshPromise(): Promise<string | null> {
   refreshPromise = (async () => {
     const refreshToken = tokenStore.getRefresh()
     if (!refreshToken) {
-      tokenStore.clear()
+      clearAuth()
       return null
     }
+
     try {
-      const res = await refreshApi.post<{ accessToken: string; refreshToken: string }>(
+      const response = await refreshApi.post<{ accessToken: string; refreshToken: string }>(
         '/auth/refresh',
-        { refreshToken }
+        { refreshToken },
       )
-      const { accessToken, refreshToken: newRefresh } = res.data
-      tokenStore.setTokens(accessToken, newRefresh)
-      return accessToken
+      tokenStore.setTokens(response.data.accessToken, response.data.refreshToken)
+      return response.data.accessToken
     } catch {
-      tokenStore.clear()
+      clearAuth()
       return null
     } finally {
       refreshPromise = null
@@ -47,55 +59,41 @@ function getRefreshPromise(): Promise<string | null> {
   return refreshPromise
 }
 
-// Request interceptor: inject Bearer access token
-api.interceptors.request.use((config) => {
-  const token = tokenStore.getAccess()
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`)
-  }
-  return config
-})
+function attachAuth(instance: AxiosInstance): void {
+  instance.interceptors.request.use((config) => {
+    const token = tokenStore.getAccess()
+    if (token) config.headers.set('Authorization', `Bearer ${token}`)
+    return config
+  })
 
-// Response interceptor: auto-refresh on 401
-api.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as any & { _retry?: boolean }
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error: AxiosError) => {
+      const originalRequest = error.config as RetryableRequest | undefined
 
-    if (
-      error.response?.status === 401 &&
-      originalRequest &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/refresh')
-    ) {
-      originalRequest._retry = true
-      const newToken = await getRefreshPromise()
-      if (newToken) {
-        originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
-        return api.request(originalRequest)
+      if (
+        error.response?.status === 401 &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !originalRequest.url?.includes('/auth/refresh')
+      ) {
+        originalRequest._retry = true
+        const newToken = await getRefreshPromise()
+
+        if (newToken) {
+          originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
+          return instance.request(originalRequest)
+        }
+
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.assign('/login')
+        }
       }
-      // Refresh failed — clear tokens and redirect to login
-      tokenStore.clear()
-      // Only redirect if we're not already on the login page
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login'
-      }
-    }
 
-    return Promise.reject(error)
-  }
-)
+      return Promise.reject(error)
+    },
+  )
+}
 
-// Upload API instance for multipart requests (images)
-export const uploadApi = axios.create({
-  baseURL: API_URL,
-  timeout: 60000,
-})
-
-uploadApi.interceptors.request.use((config) => {
-  const token = tokenStore.getAccess()
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`)
-  }
-  return config
-})
+attachAuth(api)
+attachAuth(uploadApi)
