@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { getRequestErrorMessage } from '../lib/errorMessage'
-import type { OtpResponse } from '../lib/types'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -24,13 +23,11 @@ export default function Register() {
     setLoading(true)
     try {
       const normalizedEmail = email.trim().toLowerCase()
-      await api.post<OtpResponse>('/auth/register', {
+      await api.post('/auth/register', {
         email: normalizedEmail,
         password,
       })
-      navigate('/verify-otp', {
-        state: { email: normalizedEmail, mode: 'register' },
-      })
+      navigate('/login', { replace: true })
     } catch (requestError) {
       setError(getRequestErrorMessage(requestError, 'Registration failed. Please try again.'))
     } finally {

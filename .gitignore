@@ -21,3 +21,25 @@ mobile/ios/Pods/
 
 # Kimchi ferment planning files (contain pasted user secrets)
 .kimchi/
+
+# IDE
+.idea/
+*.iml
+
+# Test results
+phone-qa-results/
+
+# Local docs and notes
+*.local.md
+plan.md
+
+# Vite build cache
+.vite/
+
+# Tests
+*.spec.ts
+*.test.ts
+tests/
+__tests__/
+test-results/
+playwright-report/

@@ -62,7 +62,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<OtpResponse> {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing?.passwordHash && existing.emailVerifiedAt) {
@@ -78,16 +78,17 @@ export class AuthService {
           passwordHash,
           displayName: existing.displayName ?? displayName,
           accountStatus: 'active',
-          emailVerifiedAt: null,
+          emailVerifiedAt: new Date(),
         },
       });
     } else {
       await this.prisma.user.create({
-        data: { email, passwordHash, displayName, role: 'user', accountStatus: 'active', emailVerifiedAt: null },
+        data: { email, passwordHash, displayName, role: 'user', accountStatus: 'active', emailVerifiedAt: new Date() },
       });
     }
 
-    return this.createOtp(email, 'Verification code sent');
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    return this.authResponse(user!);
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -372,6 +373,12 @@ export class AuthService {
     const apiSecret = this.config.get<string>('MAILJET_API_SECRET');
     const fromEmail = this.config.get<string>('MAILJET_FROM_EMAIL');
     const fromName = this.config.get<string>('MAILJET_FROM_NAME', 'PocketTrade');
+
+    const devBypass = this.config.get<string>('DEV_SKIP_EMAIL', 'false') === 'true';
+    if (devBypass) {
+      this.logger.warn(`[DEV] OTP for ${email}: ${code}`);
+      return;
+    }
 
     if (!apiKey || !apiSecret || !fromEmail) {
       throw new InternalServerErrorException('Mailjet email delivery is not configured');
