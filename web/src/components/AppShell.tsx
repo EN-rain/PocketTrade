@@ -1,18 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import HomeIcon from './icons/HomeIcon'
-import SearchIcon from './icons/SearchIcon'
-import PlusIcon from './icons/PlusIcon'
-import MessageIcon from './icons/MessageIcon'
-import UserIcon from './icons/UserIcon'
 
-const tabs = [
-  { path: '/', label: 'Home', icon: HomeIcon },
-  { path: '/search', label: 'Search', icon: SearchIcon },
-  { path: '/sell', label: 'Sell', icon: PlusIcon },
-  { path: '/messages', label: 'Messages', icon: MessageIcon },
-  { path: '/profile', label: 'Profile', icon: UserIcon },
+const navLinks = [
+  { path: '/', label: 'Home' },
+  { path: '/search', label: 'Search' },
+  { path: '/messages', label: 'Messages' },
+  { path: '/profile', label: 'Profile' },
 ]
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -28,62 +22,120 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh text-foreground flex flex-col">
-      {/* Desktop header */}
-      <header className="hidden md:flex items-center justify-between px-6 py-3 bg-surface border-b border-card-border sticky top-0 z-30 transition-all duration-200 ease-out">
-        <Link to="/" className="text-xl font-bold text-primary tracking-tight">PocketTrade</Link>
-        <nav className="flex items-center gap-6">
-          {tabs.map((t) => (
+    <div className="min-h-dvh flex flex-col bg-background text-text-primary">
+
+      {/* ── Desktop Header ──────────────────────────────── */}
+      <header
+        className="hidden md:block sticky top-0 z-40 w-full"
+        style={{ boxShadow: 'var(--shadow-nav)' }}
+      >
+        <div className="bg-white/90 backdrop-blur-md border-b border-border">
+          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
+
+            {/* Logo */}
             <Link
-              key={t.path}
-              to={t.path}
-              onClick={t.path === '/sell' ? handleSellClick : undefined}
-              className={`text-sm font-medium hover:bg-nav-indicator rounded-lg px-3 py-1.5 transition-all duration-200 active:scale-95 ${
-                (t.path === '/' ? pathname === '/' : pathname.startsWith(t.path))
-                  ? 'text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              to="/"
+              className="font-heading text-xl font-bold text-primary shrink-0 tracking-tight hover:text-primary-dark"
             >
-              {t.label}
+              PocketTrade
             </Link>
-          ))}
-          {user ? (
-            <button
-              onClick={() => { logout(); navigate('/login') }}
-              className="text-sm text-text-secondary hover:text-error transition-colors"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link to="/login" className="text-sm font-medium text-primary">Sign in</Link>
-          )}
-        </nav>
+
+            {/* Nav Links */}
+            <nav className="flex items-center gap-1">
+              {navLinks.map((t) => {
+                const isActive = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)
+                return (
+                  <Link
+                    key={t.path}
+                    to={t.path}
+                    className={`text-sm font-medium px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                      isActive
+                        ? 'bg-nav-indicator text-primary font-semibold'
+                        : 'text-text-muted hover:bg-surface-high hover:text-text-primary'
+                    }`}
+                  >
+                    {t.label}
+                  </Link>
+                )
+              })}
+            </nav>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  <Link
+                    to="/sell"
+                    onClick={handleSellClick}
+                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-5 py-2 rounded-xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="w-4 h-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    </svg>
+                    List an item
+                  </Link>
+                  <button
+                    onClick={() => { logout(); navigate('/login') }}
+                    className="text-sm font-medium text-text-muted hover:text-error transition-colors cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-sm font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-5 py-2 rounded-xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    Get started
+                  </Link>
+                </>
+              )}
+            </div>
+
+          </div>
+        </div>
       </header>
 
-      {/* Main content */}
+      {/* ── Main Content ────────────────────────────────── */}
       <main className="flex-1 pb-20 md:pb-0 animate-fade-in">{children}</main>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-card-border z-30 safe-area-pb">
+      {/* ── Mobile Bottom Nav ─────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-40 safe-area-pb">
         <div className="flex items-center justify-around py-2">
-          {tabs.map((t) => {
+          {[...navLinks, { path: '/sell', label: 'Sell' }].map((t) => {
             const isActive = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)
             return (
               <Link
                 key={t.path}
                 to={t.path}
                 onClick={t.path === '/sell' ? handleSellClick : undefined}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:scale-90 transition-transform duration-150 ${
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:scale-90 transition-all duration-150 cursor-pointer ${
                   isActive ? 'text-primary' : 'text-text-muted'
                 }`}
               >
-                <t.icon className="w-6 h-6" />
-                <span className="text-[10px] font-medium">{t.label}</span>
+                <span className="text-[10px] font-semibold">{t.label}</span>
               </Link>
             )
           })}
         </div>
       </nav>
+
     </div>
   )
 }
