@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = localStorage.getItem('adminAccessToken');
   const expiresAt = Number(localStorage.getItem('adminSessionExpiresAt'));
+  // eslint-disable-next-line react-hooks/purity -- expiration check is a render-time side-effect guard
   const isExpired = !Number.isFinite(expiresAt) || expiresAt <= Date.now();
 
   if (!token || isExpired) {

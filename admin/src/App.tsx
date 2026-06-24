@@ -83,7 +83,7 @@ function App() {
         localStorage.removeItem('adminAccessToken');
         localStorage.removeItem('adminSessionExpiresAt');
         sessionStorage.removeItem('accessToken');
-        window.location.replace('/login');
+        window.location.replace('/admin/login');
       }
     }, 1000);
 
@@ -91,7 +91,7 @@ function App() {
   }, []);
 
   if (!canEnterAdmin) {
-    window.location.replace('/login');
+    window.location.replace('/admin/login');
     return null;
   }
 
