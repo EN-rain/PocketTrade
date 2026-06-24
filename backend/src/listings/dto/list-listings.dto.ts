@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsInt, Min, Max, IsIn, IsEnum, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ListingCondition } from '@prisma/client';
+import { ListingCondition, ListingStatus } from '@prisma/client';
 
 export class ListListingsQueryDto {
   @IsOptional()
@@ -28,6 +28,10 @@ export class ListListingsQueryDto {
   @IsOptional()
   @IsEnum(ListingCondition)
   condition?: ListingCondition;
+
+  @IsOptional()
+  @IsEnum(ListingStatus)
+  status?: ListingStatus;
 
   @IsOptional()
   @IsString()

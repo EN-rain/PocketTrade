@@ -136,7 +136,7 @@ export class ListingsService {
     if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
       throw new BadRequestException('minPrice cannot be greater than maxPrice');
     }
-    const where: any = { status: { in: ['active', 'sold'] } };
+    const where: any = { status: query.status ? query.status : { in: ['active', 'sold'] } };
     if (query.brand) where.brand = { equals: query.brand, mode: 'insensitive' };
     if (query.model) where.model = { contains: query.model, mode: 'insensitive' };
     if (query.condition) where.condition = query.condition;
