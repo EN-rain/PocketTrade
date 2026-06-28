@@ -277,7 +277,7 @@ function ToggleRow({
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-card-border bg-background px-4 py-3">
       <div className="min-w-0">
         <p className="text-sm font-medium text-text-primary">{label}</p>
-        <p className="text-xs text-text-muted">{hint}</p>
+        {hint ? <p className="text-xs text-text-muted">{hint}</p> : null}
       </div>
       <button
         onClick={onToggle}
@@ -875,8 +875,8 @@ export default function Profile() {
             </SectionCard>
           </div>
 
-          <div className="space-y-6">
-            <section className="pt-1">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:items-start">
+            <SectionCard title="Manage profile" icon={<OverviewIcon />}>
               <div className="space-y-4">
                 <div className="border-b border-card-border pb-4">
                   <div className="flex items-center gap-4">
@@ -910,24 +910,20 @@ export default function Profile() {
                       onClick={startEditing}
                       className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-high"
                     >
-                      Manage profile details
+                      Edit profile
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="border-b border-card-border pb-4 text-sm text-text-secondary">
-                      <p className="font-medium text-text-primary">Profile photo</p>
-                      <p className="mt-1">Click the avatar above to upload, crop, and replace your picture.</p>
-                      {editImagePreview && (
-                        <button
-                          type="button"
-                          onClick={removePreview}
-                          className="mt-3 rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface-high"
-                        >
-                          Remove pending photo
-                        </button>
-                      )}
-                    </div>
+                    {editImagePreview && (
+                      <button
+                        type="button"
+                        onClick={removePreview}
+                        className="rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface-high"
+                      >
+                        Remove pending photo
+                      </button>
+                    )}
 
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-text-secondary">Display name</label>
@@ -969,50 +965,35 @@ export default function Profile() {
                   </div>
                 )}
               </div>
-            </section>
-
-            <SectionCard
-              title="Appearance"
-              subtitle="Keep the dashboard aligned with the PocketTrade mobile theme."
-              icon={<OverviewIcon />}
-            >
-              <ToggleRow
-                label="Dark mode"
-                hint="Switch the web workspace between light and dark surfaces."
-                checked={theme === 'dark'}
-                disabled={false}
-                onToggle={toggleTheme}
-              />
             </SectionCard>
 
-            <SectionCard
-              title="Notifications"
-              subtitle="Control which marketplace activity reaches you."
-              icon={<OverviewIcon />}
-            >
+            <SectionCard title="Notif" icon={<OverviewIcon />}>
               <div className="space-y-3">
                 <ToggleRow
                   label="Email notifications"
-                  hint="Listing updates, approvals, and account alerts."
+                  hint=""
                   checked={notifEmail}
                   disabled={notifLoading}
                   onToggle={() => toggleNotif('email')}
                 />
                 <ToggleRow
                   label="Push notifications"
-                  hint="Messages and live activity while you are away."
+                  hint=""
                   checked={notifPush}
                   disabled={notifLoading}
                   onToggle={() => toggleNotif('push')}
                 />
+                <ToggleRow
+                  label="Dark mode"
+                  hint=""
+                  checked={theme === 'dark'}
+                  disabled={false}
+                  onToggle={toggleTheme}
+                />
               </div>
             </SectionCard>
 
-            <SectionCard
-              title="Security"
-              subtitle="Rotate credentials and keep account access under control."
-              icon={<SecurityIcon />}
-            >
+            <SectionCard title="Security" icon={<SecurityIcon />}>
               <form onSubmit={handleChangePassword} className="space-y-3">
                 <input
                   type="password"
@@ -1047,11 +1028,7 @@ export default function Profile() {
               </form>
             </SectionCard>
 
-            <SectionCard
-              title="Danger zone"
-              subtitle="Permanent account actions stay isolated here."
-              icon={<SecurityIcon />}
-            >
+            <SectionCard title="Delete acc" icon={<SecurityIcon />}>
               <button
                 onClick={() => setShowDeleteAccount(true)}
                 className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-high"
