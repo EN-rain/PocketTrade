@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import type { User, Listing } from '../lib/types'
 import LocationIcon from '../components/icons/LocationIcon'
+import { getAssetUrl } from '../lib/config'
 
 /* ------------------------------------------------------------------ */
 // Types & helpers
@@ -98,7 +99,7 @@ function MyListingCard({
         <div className="aspect-square relative bg-surface-high">
           {imageUrl ? (
             <img
-              src={imageUrl}
+              src={getAssetUrl(imageUrl)}
               alt={`${listing.brand} ${listing.model}`}
               className="w-full h-full object-cover"
               loading="lazy"
@@ -463,7 +464,7 @@ export default function Profile() {
                 <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold flex-shrink-0 overflow-hidden">
                   {profileImageUrl ? (
                     <img
-                      src={profileImageUrl}
+                      src={getAssetUrl(profileImageUrl)}
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
@@ -503,13 +504,13 @@ export default function Profile() {
                       <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold overflow-hidden flex-shrink-0">
                         {editImagePreview ? (
                           <img
-                            src={editImagePreview}
+                            src={getAssetUrl(editImagePreview)}
                             alt="Preview"
                             className="w-full h-full object-cover"
                           />
                         ) : profile?.profileImage ? (
                           <img
-                            src={profile.profileImage}
+                            src={getAssetUrl(profile.profileImage)}
                             alt="Profile"
                             className="w-full h-full object-cover"
                           />

@@ -1,54 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* ── Brand (matches Android app & admin dashboard) ── */
-  --color-primary:        #0B6B61;   /* main teal — Flutter primary */
-  --color-primary-light:  #0D8577;
+  --color-primary:        #0B6B61;
+  --color-primary-light:  #0F7A6F;
   --color-primary-dark:   #08544B;
-  --color-secondary:      #1F5FBF;   /* blue — Flutter secondary */
-  --color-tertiary:       #E59E0B;   /* amber — Flutter tertiary */
+  --color-primary-ink:    #10201D;
+  --color-primary-soft:   #DCEFEB;
+  --color-secondary:      #1F5FBF;
+  --color-tertiary:       #E59E0B;
 
-  /* ── Surface (matches Flutter scaffoldBackground & admin bg) ── */
-  --color-background:     #F5F7F6;   /* Flutter background */
+  --color-background:     #F5F7F6;
   --color-surface:        #FFFFFF;
-  --color-surface-high:   #E8EFEC;   /* Flutter surfaceContainerHighest */
-  --color-surface-hero:   #DCF0EB;   /* teal-tinted hero */
+  --color-surface-high:   #E8EFEC;
+  --color-surface-hero:   #EEF5F3;
 
-  /* ── Text ── */
-  --color-text-primary:   #10201D;   /* Flutter appBar foreground */
-  --color-text-secondary: #2D4A46;
-  --color-text-muted:     #5E7A75;
+  --color-text-primary:   #10201D;
+  --color-text-secondary: #375751;
+  --color-text-muted:     #607873;
 
-  /* ── Utility ── */
-  --color-error:          #B42318;   /* Flutter error */
+  --color-error:          #B42318;
+  --color-error-soft:     #FEE4E2;
   --color-warning:        #E59E0B;
   --color-success:        #16A34A;
 
-  /* ── Borders (matches Flutter card borderColor) ── */
-  --color-border:         #D4DDDA;   /* Flutter input border */
+  --color-border:         #D4DDDA;
   --color-border-strong:  #B0C4BE;
-  --color-card-border:    #E2E8E5;   /* Flutter cardTheme border */
-  --color-nav-indicator:  #DCEFEB;   /* Flutter navigationBar indicator */
+  --color-card-border:    #E2E8E5;
+  --color-nav-indicator:  #DCEFEB;
   --color-input-border:   #D4DDDA;
 
-  /* ── Typography (Inter — matches admin dashboard feel) ── */
   --font-heading: 'Inter', system-ui, sans-serif;
   --font-sans:    'Inter', system-ui, sans-serif;
 
-  /* ── Radius (matches Flutter r:8) ── */
   --radius-sm:  6px;
-  --radius-md:  10px;
-  --radius-lg:  14px;
-  --radius-xl:  20px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
 
-  /* ── Shadow ── */
-  --shadow-card:       0 1px 4px 0 rgba(11,107,97,0.07), 0 1px 2px 0 rgba(11,107,97,0.05);
-  --shadow-card-hover: 0 6px 24px 0 rgba(11,107,97,0.14), 0 2px 6px 0 rgba(11,107,97,0.08);
-  --shadow-nav:        0 1px 0 0 var(--color-card-border), 0 2px 8px 0 rgba(11,107,97,0.06);
+  --shadow-card:       0 1px 3px 0 rgba(16, 32, 29, 0.04);
+  --shadow-card-hover: 0 10px 24px 0 rgba(11, 107, 97, 0.10), 0 3px 8px 0 rgba(16, 32, 29, 0.05);
+  --shadow-nav:        0 1px 0 0 var(--color-card-border), 0 3px 10px 0 rgba(16, 32, 29, 0.04);
 }
 
-/* ─── Base ─────────────────────────────────────────── */
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -93,7 +87,6 @@
   }
 }
 
-/* ─── Utilities ─────────────────────────────────────── */
 @layer utilities {
   .font-heading { font-family: var(--font-heading); }
 
@@ -103,13 +96,11 @@
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  /* Animations */
-  .animate-fade-in    { animation: fadeIn   0.35s ease-out both; }
-  .animate-slide-up   { animation: slideUp  0.4s  ease-out both; }
-  .animate-scale-in   { animation: scaleIn  0.22s ease-out both; }
+  .animate-fade-in    { animation: fadeIn 0.35s ease-out both; }
+  .animate-slide-up   { animation: slideUp 0.4s ease-out both; }
+  .animate-scale-in   { animation: scaleIn 0.22s ease-out both; }
   .animate-pulse-soft { animation: pulseSoft 2s ease-in-out infinite; }
 
-  /* Card lift — matches Flutter card elevation feel */
   .card-lift {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
@@ -118,33 +109,33 @@
     box-shadow: var(--shadow-card-hover);
   }
 
-  /* Hero — soft teal tint matching brand */
   .hero-gradient {
-    background: linear-gradient(135deg, #E8F4F2 0%, #F0F7F5 60%, #F5F7F6 100%);
+    background: linear-gradient(180deg, #eef5f3 0%, #f5f7f6 72%);
   }
 
-  /* Teal pill / tag */
   .badge-primary {
-    background-color: #E8F4F2;
+    background-color: var(--color-primary-soft);
     color: var(--color-primary);
     font-weight: 600;
   }
 }
 
-/* ─── Keyframes ─────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
 }
+
 @keyframes pulseSoft {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
+  50% { opacity: 0.6; }
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
+import { getAssetUrl } from '../lib/config'
 
 interface FormState {
   brand: string
@@ -201,7 +202,7 @@ export default function CreateListing() {
                     className="relative w-20 h-20 rounded-xl border border-card-border overflow-hidden flex-shrink-0"
                   >
                     <img
-                      src={url}
+                      src={getAssetUrl(url)}
                       alt={`Preview ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />

@@ -63,10 +63,10 @@ export default function Home() {
       <section className="hero-gradient border-b border-border">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-16">
           <div className="max-w-2xl">
-            <h1 className="font-heading text-3xl md:text-5xl font-bold text-primary leading-tight mb-3 animate-slide-up">
+            <h1 className="font-heading text-3xl md:text-5xl font-bold text-text-primary leading-tight mb-3 animate-slide-up">
               Buy &amp; sell phones
               <br />
-              <span className="text-primary-light">in your pocket</span>
+              <span className="text-primary">in your pocket</span>
             </h1>
             <p className="text-text-muted text-base md:text-lg mb-8 animate-slide-up" style={{ animationDelay: '80ms' }}>
               Discover great deals on pre-loved smartphones near you.
@@ -75,7 +75,7 @@ export default function Home() {
             {/* Search Bar */}
             <form
               onSubmit={handleSearch}
-              className="flex items-center bg-white rounded-2xl border border-border-strong shadow-lg overflow-hidden animate-slide-up"
+              className="flex items-center bg-surface rounded-2xl border border-border-strong shadow-lg overflow-hidden animate-slide-up"
               style={{ animationDelay: '150ms' }}
             >
               <div className="flex items-center gap-2 flex-1 px-4 py-1">
@@ -115,7 +115,7 @@ export default function Home() {
                 <button
                   key={q}
                   onClick={() => navigate(`/search?q=${encodeURIComponent(q)}`)}
-                  className="text-xs text-text-secondary bg-white/80 hover:bg-white border border-border rounded-full px-3 py-1.5 transition-all duration-200 hover:border-primary hover:text-primary cursor-pointer"
+                  className="text-xs text-text-secondary bg-surface hover:bg-surface-high border border-border rounded-full px-3 py-1.5 transition-all duration-200 hover:border-primary hover:text-primary cursor-pointer"
                 >
                   {q}
                 </button>
@@ -142,7 +142,7 @@ export default function Home() {
         {status === 'pending' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-card-border overflow-hidden animate-pulse">
+              <div key={i} className="bg-surface rounded-xl border border-card-border overflow-hidden animate-pulse">
                 <div className="aspect-[4/3] bg-surface-high" />
                 <div className="p-4 space-y-2">
                   <div className="h-4 bg-surface-high rounded w-3/4" />
@@ -157,7 +157,7 @@ export default function Home() {
         {/* Error state */}
         {status === 'error' && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-error-soft flex items-center justify-center mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"

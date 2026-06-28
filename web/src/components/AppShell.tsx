@@ -29,7 +29,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         className="hidden md:block sticky top-0 z-40 w-full"
         style={{ boxShadow: 'var(--shadow-nav)' }}
       >
-        <div className="bg-white/95 backdrop-blur-md border-b border-border">
+        <div className="bg-background/95 backdrop-blur-md border-b border-border">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
 
             {/* Logo */}
@@ -116,7 +116,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <main className="flex-1 pb-20 md:pb-0 animate-fade-in">{children}</main>
 
       {/* ── Mobile Bottom Nav ─────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-40 safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-40 safe-area-pb">
         <div className="flex items-center justify-around py-2">
           {[...navLinks, { path: '/sell', label: 'Sell' }].map((t) => {
             const isActive = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)

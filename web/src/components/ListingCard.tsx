@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Listing } from '../lib/types'
 import HeartIcon from './icons/HeartIcon'
 import LocationIcon from './icons/LocationIcon'
+import { getAssetUrl } from '../lib/config'
 
 interface ListingCardProps {
   listing: Listing
@@ -32,7 +33,7 @@ export default function ListingCard({ listing, onToggleFavorite }: ListingCardPr
         <div className="aspect-[4/3] relative bg-surface-high overflow-hidden">
           {imageUrl ? (
             <img
-              src={imageUrl}
+              src={getAssetUrl(imageUrl)}
               alt={`${listing.brand} ${listing.model}`}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import type { Message, Conversation } from '../lib/types'
 import BackArrowIcon from '../components/icons/BackArrowIcon'
 import { API_URL } from '../lib/config'
+import { getAssetUrl } from '../lib/config'
 
 function getOtherUser(conversation: Conversation, currentUserId: number) {
   if (conversation.buyerId === currentUserId) {
@@ -193,7 +194,7 @@ export default function Chat() {
         <div className="flex items-center gap-3">
           {otherUser?.profileImage ? (
             <img
-              src={otherUser.profileImage}
+              src={getAssetUrl(otherUser.profileImage)}
               alt={otherName}
               className="w-9 h-9 rounded-full object-cover"
             />

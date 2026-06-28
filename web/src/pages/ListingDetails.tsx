@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import type { Listing } from '../lib/types'
 import HeartIcon from '../components/icons/HeartIcon'
 import LocationIcon from '../components/icons/LocationIcon'
+import { getAssetUrl } from '../lib/config'
 
 function fetchListing(id: string) {
   return api.get<Listing>(`/listings/${id}`)
@@ -115,7 +116,7 @@ export default function ListingDetails() {
             <div className="aspect-square rounded-xl border border-card-border bg-surface-high overflow-hidden relative">
               {mainImage ? (
                 <img
-                  src={mainImage}
+                  src={getAssetUrl(mainImage)}
                   alt={`${listing.brand} ${listing.model}`}
                   className="w-full h-full object-cover"
                 />
@@ -143,7 +144,7 @@ export default function ListingDetails() {
                     }`}
                   >
                     <img
-                      src={img.url}
+                      src={getAssetUrl(img.url)}
                       alt={`Thumbnail ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -218,7 +219,7 @@ export default function ListingDetails() {
                 <div className="w-10 h-10 rounded-full bg-surface-high border border-card-border flex items-center justify-center overflow-hidden flex-shrink-0">
                   {seller?.profileImage ? (
                     <img
-                      src={seller.profileImage}
+                      src={getAssetUrl(seller.profileImage)}
                       alt={seller.displayName || 'Seller'}
                       className="w-full h-full object-cover"
                     />

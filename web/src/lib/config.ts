@@ -33,3 +33,11 @@ function resolveApiUrl(): string {
 }
 
 export const API_URL: string = resolveApiUrl()
+
+export function getAssetUrl(url?: string | null): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url
+  }
+  return `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`
+}

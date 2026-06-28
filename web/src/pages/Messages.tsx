@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import type { PaginatedConversations, Conversation } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import AppShell from '../components/AppShell'
+import { getAssetUrl } from '../lib/config'
 
 function fetchConversations() {
   return api.get<PaginatedConversations>('/conversations', {
@@ -124,7 +125,7 @@ export default function Messages() {
                   <div className="relative shrink-0">
                     {otherUser.profileImage ? (
                       <img
-                        src={otherUser.profileImage}
+                        src={getAssetUrl(otherUser.profileImage)}
                         alt={otherUser.displayName ?? 'User'}
                         className="w-12 h-12 rounded-full object-cover"
                       />
@@ -169,7 +170,7 @@ export default function Messages() {
                   {/* Listing thumbnail */}
                   {listingImage && (
                     <img
-                      src={listingImage}
+                      src={getAssetUrl(listingImage)}
                       alt={listingLabel ?? 'Listing'}
                       className="w-12 h-12 rounded-lg object-cover shrink-0"
                     />
