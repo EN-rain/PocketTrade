@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import type { User, Listing } from '../lib/types'
+import type { User, Listing, PaginatedListings } from '../lib/types'
 import LocationIcon from '../components/icons/LocationIcon'
 import { getAssetUrl, getListingImageUrl } from '../lib/config'
 
@@ -48,7 +48,9 @@ function fetchProfile() {
 }
 
 function fetchMyListings() {
-  return api.get<Listing[]>('/users/me/listings')
+  return api.get<PaginatedListings>('/listings/mine', {
+    params: { page: 1, limit: 60 },
+  })
 }
 
 function updateProfileText(payload: { displayName: string; location: string }) {
@@ -101,17 +103,75 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+async function buildCroppedImageFile(
+  src: string,
+  zoom: number,
+  offsetX: number,
+  offsetY: number,
+): Promise<File> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = src
+  })
+
+  const frame = 320
+  const baseScale = Math.max(frame / image.naturalWidth, frame / image.naturalHeight)
+  const scale = baseScale * zoom
+  const displayWidth = image.naturalWidth * scale
+  const displayHeight = image.naturalHeight * scale
+  const left = (frame - displayWidth) / 2 + offsetX
+  const top = (frame - displayHeight) / 2 + offsetY
+
+  const sourceX = clamp((0 - left) / scale, 0, image.naturalWidth)
+  const sourceY = clamp((0 - top) / scale, 0, image.naturalHeight)
+  const sourceWidth = clamp(frame / scale, 1, image.naturalWidth - sourceX)
+  const sourceHeight = clamp(frame / scale, 1, image.naturalHeight - sourceY)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Failed to prepare crop canvas')
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  )
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) resolve(result)
+      else reject(new Error('Failed to create cropped image'))
+    }, 'image/jpeg', 0.92)
+  })
+
+  return new File([blob], `profile-${Date.now()}.jpg`, { type: 'image/jpeg' })
+}
+
 function statusTone(status: string): string {
   switch (status) {
     case 'active':
       return 'bg-primary-soft text-primary'
     case 'pending':
-      return 'bg-tertiary/15 text-tertiary'
+      return 'bg-primary-soft text-primary'
     case 'sold':
-      return 'bg-secondary/10 text-secondary'
+      return 'bg-surface-high text-text-primary'
     case 'rejected':
     case 'removed':
-      return 'bg-error/10 text-error'
+      return 'bg-surface-high text-text-secondary'
     default:
       return 'bg-surface-high text-text-secondary'
   }
@@ -155,7 +215,7 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-card-border bg-surface p-5 shadow-[var(--shadow-card)] md:p-6">
+    <section className="border-t border-card-border pt-5 md:pt-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -187,16 +247,12 @@ function MetricCard({
   tone?: 'primary' | 'secondary' | 'tertiary' | 'neutral'
 }) {
   const toneClass =
-    tone === 'secondary'
-      ? 'bg-secondary/8 text-secondary'
-      : tone === 'tertiary'
-        ? 'bg-tertiary/14 text-tertiary'
-        : tone === 'neutral'
-          ? 'bg-surface-high text-text-primary'
-          : 'bg-primary-soft text-primary'
+    tone === 'neutral'
+      ? 'bg-surface-high text-text-primary'
+      : 'bg-primary-soft text-primary'
 
   return (
-    <div className="rounded-2xl border border-card-border bg-surface p-4 shadow-[var(--shadow-card)]">
+    <div className="rounded-2xl border border-card-border bg-background p-4">
       <div className={`inline-flex rounded-xl px-3 py-1 text-xs font-semibold ${toneClass}`}>{label}</div>
       <div className="mt-4 text-2xl font-bold tracking-tight text-text-primary">{value}</div>
     </div>
@@ -245,7 +301,6 @@ function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  danger,
   onConfirm,
   onCancel,
 }: {
@@ -253,7 +308,6 @@ function ConfirmDialog({
   title: string
   description: string
   confirmLabel: string
-  danger?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -272,12 +326,92 @@ function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-white ${
-              danger ? 'bg-error hover:bg-error/90' : 'bg-primary hover:bg-primary-dark'
-            }`}
+            className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
           >
             {confirmLabel}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CropDialog({
+  open,
+  imageSrc,
+  zoom,
+  offsetX,
+  offsetY,
+  busy,
+  onZoomChange,
+  onOffsetXChange,
+  onOffsetYChange,
+  onCancel,
+  onApply,
+}: {
+  open: boolean
+  imageSrc: string | null
+  zoom: number
+  offsetX: number
+  offsetY: number
+  busy: boolean
+  onZoomChange: (value: number) => void
+  onOffsetXChange: (value: number) => void
+  onOffsetYChange: (value: number) => void
+  onCancel: () => void
+  onApply: () => void
+}) {
+  if (!open || !imageSrc) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-xl rounded-3xl border border-card-border bg-surface p-5 shadow-xl md:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-text-primary">Edit profile photo</h3>
+            <p className="mt-1 text-sm text-text-secondary">Adjust the crop, then replace your profile picture.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-card-border px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-high"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-[320px_minmax(0,1fr)] md:items-start">
+          <div className="mx-auto h-80 w-80 overflow-hidden rounded-[28px] border border-card-border bg-background shadow-[var(--shadow-card)]">
+            <img
+              src={imageSrc}
+              alt="Crop preview"
+              className="h-full w-full object-cover"
+              style={{ transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})` }}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-muted">Zoom</label>
+              <input type="range" min="1" max="2.6" step="0.01" value={zoom} onChange={(e) => onZoomChange(Number(e.target.value))} className="w-full accent-[var(--color-primary)]" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-muted">Horizontal</label>
+              <input type="range" min="-110" max="110" step="1" value={offsetX} onChange={(e) => onOffsetXChange(Number(e.target.value))} className="w-full accent-[var(--color-primary)]" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-text-muted">Vertical</label>
+              <input type="range" min="-110" max="110" step="1" value={offsetY} onChange={(e) => onOffsetYChange(Number(e.target.value))} className="w-full accent-[var(--color-primary)]" />
+            </div>
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={busy}
+              className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+            >
+              {busy ? 'Applying...' : 'Apply photo'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -303,7 +437,7 @@ function MyListingCard({
   const secondaryAction = canMarkSold ? onMarkSold : onRepublish
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-card-border bg-surface shadow-[var(--shadow-card)] transition-transform duration-200 hover:-translate-y-0.5">
+    <article className="overflow-hidden rounded-2xl border border-card-border bg-background transition-colors duration-200 hover:bg-surface">
       <Link to={`/listing/${listing.id}`} className="block">
         <div className="relative aspect-[4/3] bg-surface-high">
           {imageUrl ? (
@@ -348,7 +482,7 @@ function MyListingCard({
           <button
             onClick={() => onDelete(listing.id)}
             disabled={isPending}
-            className="rounded-xl border border-card-border px-3 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
+            className="rounded-xl border border-card-border px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-high disabled:opacity-50"
           >
             Delete
           </button>
@@ -369,6 +503,11 @@ export default function Profile() {
   const [editLocation, setEditLocation] = useState('')
   const [editImageFile, setEditImageFile] = useState<File | null>(null)
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
+  const [cropSource, setCropSource] = useState<string | null>(null)
+  const [cropZoom, setCropZoom] = useState(1)
+  const [cropOffsetX, setCropOffsetX] = useState(0)
+  const [cropOffsetY, setCropOffsetY] = useState(0)
+  const [cropBusy, setCropBusy] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -397,7 +536,7 @@ export default function Profile() {
     queryFn: fetchMyListings,
     enabled: !!profile?.id,
   })
-  const myListings = listingsRes?.data ?? []
+  const myListings = listingsRes?.data.items ?? []
 
   const profileTextMutation = useMutation({
     mutationFn: updateProfileText,
@@ -487,16 +626,44 @@ export default function Profile() {
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setEditImageFile(file)
-    setEditImagePreview(URL.createObjectURL(file))
+    if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+    setCropSource(URL.createObjectURL(file))
+    setCropZoom(1)
+    setCropOffsetX(0)
+    setCropOffsetY(0)
+    setIsEditing(true)
     e.target.value = ''
-  }, [])
+  }, [editImagePreview])
 
   const removePreview = useCallback(() => {
     if (editImagePreview) URL.revokeObjectURL(editImagePreview)
     setEditImageFile(null)
     setEditImagePreview(null)
   }, [editImagePreview])
+
+  const closeCropDialog = useCallback(() => {
+    if (cropSource) URL.revokeObjectURL(cropSource)
+    setCropSource(null)
+    setCropZoom(1)
+    setCropOffsetX(0)
+    setCropOffsetY(0)
+    setCropBusy(false)
+  }, [cropSource])
+
+  const applyCrop = useCallback(async () => {
+    if (!cropSource) return
+    setCropBusy(true)
+    try {
+      const croppedFile = await buildCroppedImageFile(cropSource, cropZoom, cropOffsetX, cropOffsetY)
+      const previewUrl = URL.createObjectURL(croppedFile)
+      if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+      setEditImageFile(croppedFile)
+      setEditImagePreview(previewUrl)
+      closeCropDialog()
+    } catch {
+      setCropBusy(false)
+    }
+  }, [closeCropDialog, cropOffsetX, cropOffsetY, cropSource, cropZoom, editImagePreview])
 
   const startEditing = () => {
     setEditDisplayName(profile?.displayName ?? '')
@@ -511,6 +678,7 @@ export default function Profile() {
     if (editImagePreview) URL.revokeObjectURL(editImagePreview)
     setEditImageFile(null)
     setEditImagePreview(null)
+    closeCropDialog()
   }
 
   const toggleNotif = (type: 'email' | 'push') => {
@@ -587,11 +755,11 @@ export default function Profile() {
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-6">
-        <section className="overflow-hidden rounded-[28px] border border-card-border bg-surface shadow-[var(--shadow-card)]">
+        <section className="overflow-hidden rounded-[28px] border border-card-border bg-surface">
           <div className="hero-gradient px-5 py-6 md:px-8 md:py-8">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-card-border bg-surface text-2xl font-bold text-primary shadow-[var(--shadow-card)]">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-card-border bg-surface text-2xl font-bold text-primary">
                   {profileImageUrl ? (
                     <img src={getAssetUrl(profileImageUrl)} alt="Profile" className="h-full w-full object-cover" />
                   ) : (
@@ -623,20 +791,6 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <div className="grid gap-3 border-t border-card-border bg-surface px-5 py-4 md:grid-cols-3 md:px-8">
-            <Link to="/sell" className="rounded-2xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-high">
-              Create a new listing
-            </Link>
-            <Link to="/messages" className="rounded-2xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-high">
-              Open messages
-            </Link>
-            <button
-              onClick={startEditing}
-              className="rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
-            >
-              Edit profile
-            </button>
-          </div>
         </section>
 
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.9fr)]">
@@ -661,8 +815,8 @@ export default function Profile() {
               )}
 
               {listingsError && (
-                <div className="rounded-2xl border border-error/15 bg-error/5 px-5 py-8 text-center">
-                  <p className="font-medium text-error">Failed to load listings</p>
+                <div className="rounded-2xl border border-card-border bg-background px-5 py-8 text-center">
+                  <p className="font-medium text-text-primary">Failed to load listings</p>
                   <p className="mt-1 text-sm text-text-muted">{dashboardListingError}</p>
                   <button
                     onClick={() => refetchListings()}
@@ -720,21 +874,23 @@ export default function Profile() {
           </div>
 
           <div className="space-y-6">
-            <SectionCard
-              title="Account overview"
-              subtitle="Identity, listing pace, and fast profile maintenance."
-              icon={<OverviewIcon />}
-            >
+            <section className="pt-1">
               <div className="space-y-4">
-                <div className="rounded-2xl border border-card-border bg-background p-4">
+                <div className="border-b border-card-border pb-4">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary-soft text-lg font-bold text-primary">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-primary-soft text-lg font-bold text-primary"
+                      aria-label="Change profile photo"
+                    >
                       {profileImageUrl ? (
                         <img src={getAssetUrl(profileImageUrl)} alt="Profile" className="h-full w-full object-cover" />
                       ) : (
                         initials
                       )}
-                    </div>
+                      <span className="absolute inset-0 bg-primary/0 transition-colors group-hover:bg-primary/10" />
+                    </button>
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-text-primary">{profile?.displayName || 'Unnamed account'}</p>
                       <p className="truncate text-sm text-text-secondary">{profile?.email}</p>
@@ -744,57 +900,31 @@ export default function Profile() {
 
                 {!isEditing ? (
                   <div className="space-y-3">
-                    <div className="rounded-2xl border border-card-border bg-background p-4 text-sm text-text-secondary">
+                    <div className="border-b border-card-border pb-4 text-sm text-text-secondary">
                       <p className="font-medium text-text-primary">Location</p>
                       <p className="mt-1">{profile?.location || 'No location added yet'}</p>
                     </div>
                     <button
                       onClick={startEditing}
-                      className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary-dark"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-high"
                     >
-                      Edit profile details
+                      Manage profile details
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-text-secondary">Profile photo</label>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary-soft text-sm font-bold text-primary">
-                          {editImagePreview ? (
-                            <img src={getAssetUrl(editImagePreview)} alt="Preview" className="h-full w-full object-cover" />
-                          ) : profile?.profileImage ? (
-                            <img src={getAssetUrl(profile.profileImage)} alt="Profile" className="h-full w-full object-cover" />
-                          ) : (
-                            initials
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface-high"
-                          >
-                            {editImagePreview || profile?.profileImage ? 'Change image' : 'Upload image'}
-                          </button>
-                          {(editImagePreview || profile?.profileImage) && (
-                            <button
-                              type="button"
-                              onClick={removePreview}
-                              className="rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-error hover:bg-error/5"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageChange}
-                        />
-                      </div>
+                    <div className="border-b border-card-border pb-4 text-sm text-text-secondary">
+                      <p className="font-medium text-text-primary">Profile photo</p>
+                      <p className="mt-1">Click the avatar above to upload, crop, and replace your picture.</p>
+                      {editImagePreview && (
+                        <button
+                          type="button"
+                          onClick={removePreview}
+                          className="mt-3 rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface-high"
+                        >
+                          Remove pending photo
+                        </button>
+                      )}
                     </div>
 
                     <div>
@@ -837,7 +967,7 @@ export default function Profile() {
                   </div>
                 )}
               </div>
-            </SectionCard>
+            </section>
 
             <SectionCard
               title="Notifications"
@@ -889,12 +1019,12 @@ export default function Profile() {
                   placeholder="Confirm new password"
                   className="w-full rounded-xl border border-input-border bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
-                {passwordError && <p className="text-xs text-error">{passwordError}</p>}
+                {passwordError && <p className="text-xs text-text-secondary">{passwordError}</p>}
                 {passwordSuccess && <p className="text-xs text-primary">{passwordSuccess}</p>}
                 <button
                   type="submit"
                   disabled={passwordMutation.isPending}
-                  className="w-full rounded-xl bg-secondary px-4 py-3 text-sm font-medium text-white hover:bg-secondary/90 disabled:opacity-60"
+                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
                 >
                   {passwordMutation.isPending ? 'Updating...' : 'Update password'}
                 </button>
@@ -908,7 +1038,7 @@ export default function Profile() {
             >
               <button
                 onClick={() => setShowDeleteAccount(true)}
-                className="w-full rounded-xl bg-error px-4 py-3 text-sm font-medium text-white hover:bg-error/90"
+                className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-high"
               >
                 Delete account
               </button>
@@ -917,12 +1047,33 @@ export default function Profile() {
         </div>
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageChange}
+      />
+
+      <CropDialog
+        open={!!cropSource}
+        imageSrc={cropSource}
+        zoom={cropZoom}
+        offsetX={cropOffsetX}
+        offsetY={cropOffsetY}
+        busy={cropBusy}
+        onZoomChange={setCropZoom}
+        onOffsetXChange={setCropOffsetX}
+        onOffsetYChange={setCropOffsetY}
+        onCancel={closeCropDialog}
+        onApply={() => { void applyCrop() }}
+      />
+
       <ConfirmDialog
         open={!!deleteListingId}
         title="Delete listing?"
         description="This action cannot be undone. The listing will be permanently removed."
         confirmLabel="Delete"
-        danger
         onConfirm={() => deleteListingId && deleteListingMutation.mutate(deleteListingId)}
         onCancel={() => setDeleteListingId(null)}
       />
@@ -932,7 +1083,6 @@ export default function Profile() {
         title="Delete your account?"
         description="This will permanently delete your account and all your listings. This action cannot be undone."
         confirmLabel="Delete account"
-        danger
         onConfirm={() => deleteAccountMutation.mutate()}
         onCancel={() => setShowDeleteAccount(false)}
       />

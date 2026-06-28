@@ -39,7 +39,7 @@ export interface Listing {
   colour?: string
   description?: string
   location?: string
-  status: 'active' | 'sold'
+  status: 'draft' | 'pending' | 'active' | 'rejected' | 'sold' | 'removed' | 'expired'
   images: ListingImage[]
   sellerId: number
   seller?: User
