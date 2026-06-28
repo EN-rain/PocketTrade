@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,9 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import '../api/api_client.dart';
 import '../models/app_user.dart';
 import '../storage/secure_storage.dart';
+import '../theme/theme_mode_controller.dart';
 import '../widgets/cached_app_image.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({
     super.key,
     required this.apiUrl,
@@ -23,10 +25,10 @@ class ProfileScreen extends StatefulWidget {
   final bool showListingsOnOpen;
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   AppUser? _user;
   String? _error;
   bool _loading = true;
@@ -612,6 +614,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final themeMode = ref.watch(themeModeControllerProvider);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -660,6 +663,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             title: 'Notifications',
                             subtitle: 'Messages and listing updates',
                             onTap: _editNotificationPreferences,
+                          ),
+                          _ThemeModeRow(
+                            isDark: themeMode == ThemeMode.dark,
+                            onChanged: (_) {
+                              ref
+                                  .read(themeModeControllerProvider.notifier)
+                                  .toggle();
+                            },
                           ),
                           _ActionRow(
                             icon: Icons.description_outlined,
@@ -723,6 +734,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
       null || '' => 'Listing',
       _ => value,
     };
+  }
+}
+
+class _ThemeModeRow extends StatelessWidget {
+  const _ThemeModeRow({
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  final bool isDark;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              color: theme.colorScheme.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dark mode',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Match the darker PocketTrade web dashboard look.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: isDark,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
   }
 }
 

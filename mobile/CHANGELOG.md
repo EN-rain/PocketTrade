@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.26+27
+
+- Add persistent light and dark mode support to both the web app and Android app.
+
 ## 1.0.25+26
 
 - Make the Search filter overlay fill the screen body and block all interaction behind it.

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import type { User, Listing, PaginatedListings } from '../lib/types'
 import LocationIcon from '../components/icons/LocationIcon'
 import { getAssetUrl, getListingImageUrl } from '../lib/config'
@@ -496,6 +497,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { logout, setUser } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isEditing, setIsEditing] = useState(false)
@@ -968,6 +970,20 @@ export default function Profile() {
                 )}
               </div>
             </section>
+
+            <SectionCard
+              title="Appearance"
+              subtitle="Keep the dashboard aligned with the PocketTrade mobile theme."
+              icon={<OverviewIcon />}
+            >
+              <ToggleRow
+                label="Dark mode"
+                hint="Switch the web workspace between light and dark surfaces."
+                checked={theme === 'dark'}
+                disabled={false}
+                onToggle={toggleTheme}
+              />
+            </SectionCard>
 
             <SectionCard
               title="Notifications"
