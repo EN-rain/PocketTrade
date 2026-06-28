@@ -10,12 +10,12 @@ interface ListingCardProps {
 }
 
 const conditionColors: Record<string, string> = {
-  new:           'bg-emerald-50 text-emerald-700',
-  like_new:      'bg-surface-high text-primary',
-  excellent:     'bg-surface-high text-primary',
-  good:          'bg-blue-50 text-secondary',
-  fair:          'bg-amber-50 text-amber-700',
-  poor:          'bg-red-50 text-error',
+  new:           'bg-success-soft text-success',
+  like_new:      'bg-primary-soft text-primary',
+  excellent:     'bg-primary-soft text-primary',
+  good:          'bg-secondary-soft text-secondary',
+  fair:          'bg-warning-soft text-warning',
+  poor:          'bg-error-soft text-error',
 }
 
 export default function ListingCard({ listing, onToggleFavorite }: ListingCardProps) {
@@ -26,7 +26,7 @@ export default function ListingCard({ listing, onToggleFavorite }: ListingCardPr
   return (
     <Link to={`/listing/${listing.id}`} className="block group cursor-pointer">
       <div
-        className="bg-white rounded-xl border border-card-border overflow-hidden card-lift"
+        className="bg-surface-raised rounded-xl border border-card-border overflow-hidden card-lift"
         style={{ boxShadow: 'var(--shadow-card)' }}
       >
         {/* ── Image ─────────────────────────────────── */}
@@ -72,7 +72,7 @@ export default function ListingCard({ listing, onToggleFavorite }: ListingCardPr
                 onToggleFavorite(listing.id)
               }}
               aria-label={listing.isFavourite ? 'Remove from favourites' : 'Add to favourites'}
-              className="absolute top-2 right-2 p-2 rounded-full bg-white/90 hover:bg-white shadow-md transition-all duration-200 active:scale-90 cursor-pointer"
+              className="absolute top-2 right-2 p-2 rounded-full bg-surface/90 hover:bg-surface-high shadow-md transition-all duration-200 active:scale-90 cursor-pointer"
             >
               <HeartIcon
                 filled={listing.isFavourite}

@@ -115,7 +115,7 @@ export default function Search() {
         </div>
 
         {showFilters && (
-          <div className="bg-surface rounded-xl border border-card-border p-4 mb-4 space-y-3">
+          <div className="bg-surface-raised rounded-xl border border-card-border p-4 mb-4 space-y-3 shadow-[var(--shadow-card)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">Brand</label>
@@ -124,7 +124,7 @@ export default function Search() {
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
                   placeholder="e.g. Apple"
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div>
@@ -134,7 +134,7 @@ export default function Search() {
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   placeholder="e.g. iPhone 15"
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div>
@@ -142,7 +142,7 @@ export default function Search() {
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 >
                   <option value="">Any</option>
                   {CONDITIONS.map((c) => (
@@ -155,7 +155,7 @@ export default function Search() {
                 <select
                   value={storage}
                   onChange={(e) => setStorage(e.target.value)}
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 >
                   <option value="">Any</option>
                   {STORAGES.map((s) => (
@@ -170,7 +170,7 @@ export default function Search() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder="0"
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div>
@@ -180,7 +180,7 @@ export default function Search() {
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder="9999"
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div>
@@ -190,7 +190,7 @@ export default function Search() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. New York"
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div>
@@ -198,7 +198,7 @@ export default function Search() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="w-full rounded-lg border border-input-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full rounded-lg border border-input-border bg-surface-high px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 >
                   {SORT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
