@@ -44,37 +44,37 @@
 }
 
 :root[data-theme='dark'] {
-  --color-primary:        #58C2B5;
-  --color-primary-light:  #7AD6CB;
-  --color-primary-dark:   #2B9F92;
-  --color-primary-ink:    #EAF7F4;
-  --color-primary-soft:   #133A35;
-  --color-secondary:      #58C2B5;
-  --color-tertiary:       #58C2B5;
+  --color-primary:        #63C7BA;
+  --color-primary-light:  #8BDED4;
+  --color-primary-dark:   #389A8E;
+  --color-primary-ink:    #ECF8F5;
+  --color-primary-soft:   #173733;
+  --color-secondary:      #9FC4BB;
+  --color-tertiary:       #D6B779;
 
-  --color-background:     #091412;
-  --color-surface:        #10201D;
-  --color-surface-high:   #16302C;
-  --color-surface-hero:   #0E1B18;
+  --color-background:     #081211;
+  --color-surface:        #0F1B1A;
+  --color-surface-high:   #152625;
+  --color-surface-hero:   #0B1716;
 
-  --color-text-primary:   #F2FBF8;
-  --color-text-secondary: #B7CDC8;
-  --color-text-muted:     #87A19B;
+  --color-text-primary:   #F2F8F6;
+  --color-text-secondary: #B4C8C2;
+  --color-text-muted:     #839892;
 
-  --color-error:          #FF8A80;
-  --color-error-soft:     #341717;
-  --color-warning:        #58C2B5;
-  --color-success:        #58C2B5;
+  --color-error:          #FF9A8F;
+  --color-error-soft:     #311917;
+  --color-warning:        #D6B779;
+  --color-success:        #74C6A5;
 
-  --color-border:         #1F3A35;
-  --color-border-strong:  #2B4F48;
-  --color-card-border:    #1B3530;
-  --color-nav-indicator:  #163A34;
-  --color-input-border:   #285048;
+  --color-border:         #1D3331;
+  --color-border-strong:  #2A4A46;
+  --color-card-border:    #1A2E2C;
+  --color-nav-indicator:  #163330;
+  --color-input-border:   #27504A;
 
-  --shadow-card:       0 1px 3px 0 rgba(0, 0, 0, 0.24);
-  --shadow-card-hover: 0 10px 24px 0 rgba(0, 0, 0, 0.26), 0 3px 8px 0 rgba(0, 0, 0, 0.18);
-  --shadow-nav:        0 1px 0 0 var(--color-card-border), 0 6px 16px 0 rgba(0, 0, 0, 0.28);
+  --shadow-card:       0 1px 3px 0 rgba(0, 0, 0, 0.28);
+  --shadow-card-hover: 0 12px 30px 0 rgba(0, 0, 0, 0.30), 0 4px 10px 0 rgba(0, 0, 0, 0.20);
+  --shadow-nav:        0 1px 0 0 var(--color-card-border), 0 8px 18px 0 rgba(0, 0, 0, 0.30);
 }
 
 @layer base {
@@ -149,7 +149,7 @@
   }
 
   :root[data-theme='dark'] .hero-gradient {
-    background: linear-gradient(180deg, #102422 0%, #091412 72%);
+    background: linear-gradient(180deg, #11201e 0%, #081211 72%);
   }
 
   .badge-primary {
