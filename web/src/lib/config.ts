@@ -19,12 +19,12 @@ function resolveApiUrl(): string {
   }
 
   if (isProd) {
-    // Fail loudly in production. We throw on first import so the build
+    // Fail loudly in production. We throw on fawirst import so the build
     // surface the error (and so any runtime never ships a broken URL).
     throw new Error(
       '[PocketTrade] VITE_API_URL is required in production builds. ' +
-        'Set it in Vercel → Settings → Environment Variables ' +
-        '(e.g. https://pockettrade-ebaq.onrender.com) and redeploy.',
+      'Set it in Vercel → Settings → Environment Variables ' +
+      '(e.g. https://pockettrade-ebaq.onrender.com) and redeploy.',
     )
   }
 
