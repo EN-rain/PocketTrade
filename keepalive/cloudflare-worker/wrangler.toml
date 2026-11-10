@@ -1,0 +1,10 @@
+name = "pockettrade-keepalive"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# GitHub-style cron; Cloudflare runs this on the Workers Free plan too.
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+HEALTH_URL = "https://pockettrade-ebaq.onrender.com/health"

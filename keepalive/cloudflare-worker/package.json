@@ -1,0 +1,14 @@
+{
+  "name": "pockettrade-keepalive",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker cron that keeps the Render free backend warm.",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --test-scheduled"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

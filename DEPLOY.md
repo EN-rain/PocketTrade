@@ -68,25 +68,47 @@ GET /api-docs
 ### Free-tier keep-alive
 
 Render spins a Free web service down after **15 minutes without inbound
-traffic** (HTTP requests or WebSocket messages) and takes about a minute to
-spin back up. `.github/workflows/keepalive.yml` pings
-`https://pockettrade-ebaq.onrender.com/health` every 5 minutes to keep it warm.
+traffic** (HTTP or WebSocket messages). The next request cold-starts it in
+about a minute. To keep it warm, send it traffic from somewhere that is not
+the service itself.
 
-- No Render API key is needed. `/health` is public, and the Dockerfile sets
-  `HEALTH_CHECK_DB=false`, so the ping answers instantly without querying Neon.
-- The repository is public, so scheduled GitHub Actions runs do not consume
-  paid minutes.
-- Override the target by setting the repository variable `RENDER_HEALTH_URL`
-  (Settings → Secrets and variables → Actions → Variables). Useful when the
-  service is renamed or moved off Render.
-- Free workspaces get **750 instance-hours/month**. One always-on service uses
-  roughly 730, so do not keep a second Free web service awake in the same
-  workspace or both will be suspended when the quota runs out.
-- GitHub may delay scheduled runs by a few minutes under load, and it disables
-  schedules after 60 days without repository activity. Re-enable from the
-  Actions tab if the workflow stops firing.
-- Delete the workflow (or disable it in the Actions tab) if the service moves
-  to a paid instance type, which never sleeps.
+**No Render API key is required.** The Render API cannot wake a sleeping
+service any faster than a normal request can, and `/health` is public.
+`HEALTH_CHECK_DB=false` (in the Dockerfile) makes the ping answer instantly
+without waking Neon.
+
+Pick one of these:
+
+1. **External uptime monitor — simplest, no code.**
+   Use [cron-job.org](https://cron-job.org) or UptimeRobot (both free):
+   URL `https://pockettrade-ebaq.onrender.com/health`, interval 5 minutes,
+   timeout 120 seconds, method GET, alert when the status is not `200`.
+   Runs off your machine and does not depend on GitHub Actions.
+
+2. **Cloudflare Worker cron — free, code in this repo.**
+   `keepalive/cloudflare-worker/` contains a Worker with a 5-minute cron
+   trigger. Deploy it once (needs a free Cloudflare account):
+
+   ```bash
+   cd keepalive/cloudflare-worker
+   npx wrangler login
+   npx wrangler deploy
+   ```
+
+3. **Local fallback — only while your PC is on.**
+   `scripts/keepalive.ps1` pings the health URL once; register it every
+   5 minutes with `scripts/install-keepalive-task.ps1` (Windows Task
+   Scheduler). Stop it with `Unregister-ScheduledTask -TaskName
+   "PocketTrade Keepalive"`.
+
+4. **Paid instance — no cold starts at all.**
+   Render Starter (~$7/month) never spins down. Delete any pinger after
+   upgrading so it does not burn hours pointlessly.
+
+Free workspaces get **750 instance-hours/month**. One always-on service uses
+roughly 730, so do not keep a second Free web service awake in the same
+workspace — if the quota runs out, Render suspends all Free web services until
+the next month.
 
 ## Web app (`web/`)
 
