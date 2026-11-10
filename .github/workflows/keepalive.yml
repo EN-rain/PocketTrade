@@ -1,0 +1,43 @@
+name: Keep Render backend awake
+
+# Render spins a Free web service down after 15 minutes without inbound
+# traffic, which makes the next visitor wait ~60s for a cold start.
+# This workflow pings the public /health endpoint so the service stays warm.
+#
+# No Render API key is required: /health is public, and HEALTH_CHECK_DB is
+# "false" in the Dockerfile, so the ping does not touch Neon.
+#
+# Note: GitHub disables scheduled workflows after 60 days without repository
+# activity. Re-enable it from the Actions tab (or push any commit) if that
+# happens.
+
+on:
+  schedule:
+    # GitHub's scheduler is best-effort and can drift by a few minutes.
+    # Every 5 minutes keeps us well under Render's 15-minute idle threshold.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend /health
+        env:
+          HEALTH_URL: ${{ vars.RENDER_HEALTH_URL || 'https://pockettrade-ebaq.onrender.com/health' }}
+        run: |
+          echo "Pinging $HEALTH_URL"
+          curl --silent --show-error --fail \
+            --max-time 120 \
+            --retry 3 --retry-delay 20 --retry-all-errors \
+            "$HEALTH_URL"
+          echo
+          echo "Backend responded OK"

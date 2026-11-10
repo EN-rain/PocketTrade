@@ -65,6 +65,29 @@ GET /health
 GET /api-docs
 ```
 
+### Free-tier keep-alive
+
+Render spins a Free web service down after **15 minutes without inbound
+traffic** (HTTP requests or WebSocket messages) and takes about a minute to
+spin back up. `.github/workflows/keepalive.yml` pings
+`https://pockettrade-ebaq.onrender.com/health` every 5 minutes to keep it warm.
+
+- No Render API key is needed. `/health` is public, and the Dockerfile sets
+  `HEALTH_CHECK_DB=false`, so the ping answers instantly without querying Neon.
+- The repository is public, so scheduled GitHub Actions runs do not consume
+  paid minutes.
+- Override the target by setting the repository variable `RENDER_HEALTH_URL`
+  (Settings → Secrets and variables → Actions → Variables). Useful when the
+  service is renamed or moved off Render.
+- Free workspaces get **750 instance-hours/month**. One always-on service uses
+  roughly 730, so do not keep a second Free web service awake in the same
+  workspace or both will be suspended when the quota runs out.
+- GitHub may delay scheduled runs by a few minutes under load, and it disables
+  schedules after 60 days without repository activity. Re-enable from the
+  Actions tab if the workflow stops firing.
+- Delete the workflow (or disable it in the Actions tab) if the service moves
+  to a paid instance type, which never sleeps.
+
 ## Web app (`web/`)
 
 Deploy `web/` to Vercel or any static host that runs `vite build`.
